@@ -10,11 +10,11 @@ opcodes = {
     'and'  : 0x07 ,  # and  r1 r2 r3
     'or'   : 0x08 ,  # or   r1 r2 r3
 
-    'lw'   : 0x09 ,  # lw   r1
-    'la'   : 0x0A ,  # la
-    'li'   : 0x0B ,  # li
-    'sw'   : 0x0C ,  # sw
-    'sa'   : 0x0D ,  # sa
+    'ldw'  : 0x09 ,  # ldw  r1
+    'lda'  : 0x0A ,  # lda
+    'ldi'  : 0x0B ,  # ldi
+    'stw'  : 0x0C ,  # stw
+    'sta'  : 0x0D ,  # sta
 
     'b'    : 0x0E ,  # b    dst
     'beq'  : 0x0F ,  # beq  r1 r2 dst
