@@ -42,6 +42,13 @@ def strip_comments(assembly):
                 stripped_assembly += (line + '\n')
     return stripped_assembly
 
+def find_labels(assembly):
+    labels = {}
+    for i, line in enumerate(assembly.splitlines()):
+        if line.endswith(':'):
+            labels[line[:-1]] = i
+    return labels
+
 file_name = 'programs/gcd_iterative.asm'
 try:
     with open(file_name, 'r') as f:
@@ -52,3 +59,4 @@ except FileNotFoundError:
 print(assembly)
 print('---------------')
 print(strip_comments(assembly))
+print(find_labels(strip_comments(assembly)))
