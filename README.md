@@ -16,6 +16,8 @@
 - `ldi`
 - `stw`
 - `sta`
+- `push`
+- `pop`
 - `b    dst`
 - `beq  r1 r2 dst`
 - `bne  r1 r2 dst`

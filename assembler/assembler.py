@@ -15,16 +15,18 @@ opcodes = {
     'ldi'  : 0x0B ,  # ldi
     'stw'  : 0x0C ,  # stw
     'sta'  : 0x0D ,  # sta
+    'push' : 0x0E ,  # push c
+    'pop'  : 0x0F ,  # pop  r1
 
-    'b'    : 0x0E ,  # b    dst
-    'beq'  : 0x0F ,  # beq  r1 r2 dst
-    'bne'  : 0x10 ,  # bne  r1 r2 dst
-    'bgt'  : 0x11 ,  # bgt  r1 r2 dst
-    'bge'  : 0x12 ,  # bge  r1 r2 dst
-    'blt'  : 0x13 ,  # blt  r1 r2 dst
-    'ble'  : 0x14 ,  # ble  r1 r2 dst
-    'j'    : 0x15 ,  # j    dst
-    'jr'   : 0x16 ,  # jr   r1
-    'jal'  : 0x17    # jal  r1
+    'b'    : 0x10 ,  # b    dst
+    'beq'  : 0x11 ,  # beq  r1 r2 dst
+    'bne'  : 0x12 ,  # bne  r1 r2 dst
+    'bgt'  : 0x13 ,  # bgt  r1 r2 dst
+    'bge'  : 0x14 ,  # bge  r1 r2 dst
+    'blt'  : 0x15 ,  # blt  r1 r2 dst
+    'ble'  : 0x16 ,  # ble  r1 r2 dst
+    'j'    : 0x17 ,  # j    dst
+    'jr'   : 0x18 ,  # jr   r1
+    'jal'  : 0x19    # jal  r1
 }
 
