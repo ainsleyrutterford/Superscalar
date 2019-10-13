@@ -15,12 +15,12 @@
     addi r2 r2 39
 
 while:
-    beq r1 r2 while_done
-    ble r1 r2 less_than
-    sub r1 r1 r2
+    beq r1 r2 while_done ; while (a != b)
+    ble r1 r2 less_than  ; if (a > b)
+    sub r1 r1 r2         ; a = a - b
     j while
-less_than:
-    sub r2 r2 r1
+less_than:               ; else
+    sub r2 r2 r1         ; b = b - a
     j while
 
 while_done:
