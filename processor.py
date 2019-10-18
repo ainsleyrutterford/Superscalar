@@ -2,10 +2,10 @@ class Processor:
     def __init__(self):
         self.pc    = 0
         self.instructions = []
-        self.data = []
+        self.data = [0] * 200
     
     def fetch(self, assembly):
-        instruction = assembly[self.pc]
+        instruction = assembly.splitlines()[self.pc]
         self.pc = self.pc + 1
         return instruction
     
@@ -13,14 +13,16 @@ class Processor:
         opcode = instruction[:instruction.find(' ')]
         operands = instruction.split(' ')[1:]
         if   (opcode == 'addi'):
-            data[operands[0]] = data[operands[1]] + operands[2]
+            self.data[int(operands[0][1:])] = self.data[int(operands[1][1:])] + int(operands[2])
+        elif (opcode == 'add'):
+            self.data[int(operands[0][1:])] = self.data[int(operands[1][1:])] + self.data[int(operands[2][1:])]
         elif (opcode == 'sub'):
-            data[operands[0]] = data[operands[1]] - data[operands[2]]
+            self.data[int(operands[0][1:])] = self.data[int(operands[1][1:])] - self.data[int(operands[2][1:])]
         elif (opcode == 'beq'):
-            if (data[operands[0]] == data[operands[1]]):
-                pc = operands[2]
+            if (self.data[int(operands[0][1:])] == self.data[int(operands[1][1:])]):
+                self.pc = int(operands[2])
         elif (opcode == 'ble'):
-            if (data[operands[0]] <= data[operands[1]]):
-                pc = operands[2]
+            if (self.data[int(operands[0][1:])] <= self.data[int(operands[1][1:])]):
+                self.pc = int(operands[2])
         elif (opcode == 'j'):
-            pc = operands[0]
+            self.pc = int(operands[0])
