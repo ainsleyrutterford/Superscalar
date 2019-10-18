@@ -23,8 +23,3 @@ def replace_labels(assembly):
     for label, num in labels.items():
         final_assembly = final_assembly.replace("'" + label + "'", str(num))
     return final_assembly
-
-f = open('programs/gcd_iterative.asm', 'r')
-assembly = f.read()
-
-print(replace_labels(strip_comments(assembly)))
