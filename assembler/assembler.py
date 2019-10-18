@@ -42,12 +42,19 @@ def strip_comments(assembly):
                 stripped_assembly += (line + '\n')
     return stripped_assembly
 
-def find_labels(assembly):
+def replace_labels(assembly):
     labels = {}
+    offset = 0
+    final_assembly = ''
     for i, line in enumerate(assembly.splitlines()):
         if line.endswith(':'):
-            labels[line[:-1]] = i
-    return labels
+            labels[line[:-1]] = i - offset
+            offset += 1
+        else:
+            final_assembly += line + '\n'
+    for label, num in labels.items():
+        final_assembly = final_assembly.replace("'" + label + "'", str(num))
+    return final_assembly
 
 file_name = 'programs/gcd_iterative.asm'
 try:
@@ -56,7 +63,7 @@ try:
 except FileNotFoundError:
     print('File ' + file_name + ' does not exist.')
     exit()
+    
 print(assembly)
 print('---------------')
-print(strip_comments(assembly))
-print(find_labels(strip_comments(assembly)))
+print(replace_labels(strip_comments(assembly)))
