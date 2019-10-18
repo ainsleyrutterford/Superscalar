@@ -1,8 +1,10 @@
 class Processor:
     def __init__(self):
-        self.pc    = 0
+        self.pc = 0
         self.instructions = []
-        self.data = [0] * 200
+        self.data = [0] * 100
+        self.cycles = 0
+        self.instructions_executed = 0
     
     def fetch(self, assembly):
         instruction = assembly.splitlines()[self.pc]
