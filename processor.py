@@ -24,7 +24,3 @@ class Processor:
                 pc = operands[2]
         elif (opcode == 'j'):
             pc = operands[0]
-    
-processor = Processor()
-
-print(processor.pc)
