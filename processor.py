@@ -28,3 +28,5 @@ class Processor:
                 self.pc = int(operands[2])
         elif (opcode == 'j'):
             self.pc = int(operands[0])
+        elif (opcode == 'li'):
+            self.data[int(operands[0][1:])] = int(operands[1])

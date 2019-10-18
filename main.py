@@ -18,5 +18,6 @@ def main():
         cpu.instructions_executed += 1
         cpu.cycles += 1
         cpu_history.append(copy.deepcopy(cpu))
+    print(str(cpu.data[50]))
 
 main()

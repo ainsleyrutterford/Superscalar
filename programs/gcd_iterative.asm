@@ -9,8 +9,8 @@
 ; }
 ; return a;
 
-    addi $0 $0 27           ; int a = 27
-    addi $1 $1 39           ; int b = 39
+    li $0 27                ; int a = 27
+    li $1 39                ; int b = 39
 
 while:
     beq $0 $1 'while_done'  ; while (a != b)
