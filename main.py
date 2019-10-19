@@ -12,12 +12,12 @@ def main():
 
     cpu_history = []
 
-    while cpu.data[50] == 0:
+    while cpu.registers[10] == 0:
         instruction = cpu.fetch(program)
         cpu.execute(instruction)
         cpu.instructions_executed += 1
         cpu.cycles += 1
         cpu_history.append(copy.deepcopy(cpu))
-    print(str(cpu.data[50]))
+    print(str(cpu.registers[10]))
 
 main()
