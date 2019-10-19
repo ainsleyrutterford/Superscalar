@@ -15,9 +15,9 @@ class Processor:
     
     def execute(self, instruction):
         if (instruction[0] == '.'):
-            label = instruction[1:instruction.find(' ')]
+            label = instruction[1:instruction.find(':')]
             values = [int(x) for x in instruction.split(' ')[1:]]
-            self.array_labels[label] = len(data_memory)
+            self.array_labels[label] = len(self.data_memory)
             self.data_memory += values
             return
         opcode = instruction[:instruction.find(' ')]
@@ -57,11 +57,19 @@ class Processor:
                 index = self.registers[int(index[1:])]
             else:
                 index = int(index)
-            data_index = array_labels[label] + index
+            data_index = self.array_labels[label] + index
             self.registers[int(operands[0][1:])] = self.data_memory[data_index]
             return
         elif (opcode == 'sw'):
-            
+            array_op = operands[0]
+            label = array_op[:array_op.find('(')]
+            index = array_op[array_op.find('(')+1:array_op.find(')')]
+            if (index.startswith('$')):
+                index = self.registers[int(index[1:])]
+            else:
+                index = int(index)
+            data_index = self.array_labels[label] + index
+            self.data_memory[data_index] = self.registers[int(operands[1][1:])]
         elif (opcode == 'move'):
             self.registers[int(operands[0][1:])] = self.registers[int(operands[1][1:])]
             return
