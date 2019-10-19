@@ -34,10 +34,11 @@ for:
     sw A($3) $7             ; A[i] = temp
     move $2 $3              ; new_n = i
 less_than:                  ; A[i-1] <= A[i]
-    addi $3 $3 1               ; i++
+    addi $3 $3 1            ; i++
     blt $3 $0 'for'         ; if (i < n) for loop again
 for_done:
     move $0 $2              ; n = new_n
+    j 'while'
 
 while_done:
     li $10 1                ; set register 10 to 1
