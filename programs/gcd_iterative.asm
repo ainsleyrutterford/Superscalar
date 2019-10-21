@@ -22,4 +22,4 @@ less_than:                  ; else
     j 'while'
 
 while_done:
-    add $10 $10 $0          ; %10 contains a = gcd
+    move $10 $0             ; %10 contains a = gcd
