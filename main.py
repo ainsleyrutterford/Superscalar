@@ -18,10 +18,7 @@ def main():
         cpu.instructions_executed += 1
         cpu.cycles += 1
         cpu_history.append(copy.deepcopy(cpu))
-    for i in range(10):
-        print(str(cpu.registers[i]))
-    print('')
-    for i in range(10):
-        print(str(cpu.data_memory[i]))
+    print(cpu.registers)
+    print(cpu.data_memory)
 
 main()
