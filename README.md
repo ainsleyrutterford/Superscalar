@@ -19,5 +19,5 @@
 - `blt  r1 r2 dst`
 - `ble  r1 r2 dst`
 - `j    dst`
+- `jal  dst`
 - `jr   r1`
-- `jal  r1`
