@@ -1,9 +1,15 @@
-import copy
-
 import assembler
+import copy
 import processor
+import sys
 
 def main():
+
+    if sys.version_info[0] < 3:
+        print("Python 3 or a more recent version is required.")
+        print("Try: python3 main.py")
+        exit()
+
     f = open('programs/bubblesort.asm', 'r')
     assembly = f.read()
 
@@ -13,12 +19,15 @@ def main():
     cpu_history = []
 
     while cpu.registers[10] == 0:
-        instruction = cpu.fetch(program)
-        cpu.execute(instruction)
+        instruction = cpu.fetch(program)            # fetch
+        opcode, operands = cpu.decode(instruction)  # decode
+        cpu.execute(opcode, operands)               # execute
         cpu.instructions_executed += 1
-        cpu.cycles += 1
         cpu_history.append(copy.deepcopy(cpu))
     print(cpu.registers)
     print(cpu.data_memory)
+    print("{0} instructions executed in {1} cycles.".format(cpu.instructions_executed, cpu.cycles))
+    instructions_per_cycle = float(cpu.instructions_executed) / float(cpu.cycles)
+    print("{0:.2f} instructions per cycle achieved.".format(instructions_per_cycle))
 
 main()
