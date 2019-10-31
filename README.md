@@ -9,15 +9,9 @@
 - `subi r1 r2 c`
 - `mul  r1 r2 r3`
 - `div  r1 r2 r3`
-- `and  r1 r2 r3`
-- `or   r1 r2 r3`
-- `ldw   r1`
-- `lda`
-- `ldi`
-- `stw`
-- `sta`
-- `push`
-- `pop`
+- `lw   r1 A(i)`
+- `li   r1 c`
+- `sw   A(i) r1`
 - `b    dst`
 - `beq  r1 r2 dst`
 - `bne  r1 r2 dst`
