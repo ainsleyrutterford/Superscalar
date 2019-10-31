@@ -24,7 +24,7 @@ while:
     li $2 0                 ; int new_n = 0
     li $3 1                 ; int i = 1
 for:
-    li $4 0                 ; $4 = 0
+    li $4 0                 ; $4 = 0 THINK I CAN REMOVE THIS? TEST AND SEE
     sub $4 $3 $1            ; $4 = i-1
     lw $5 A($4)             ; $5 = A[i-1]
     lw $6 A($3)             ; $6 = A[i]
