@@ -12,7 +12,6 @@
 - `lw   r1 A(i)`
 - `li   r1 c`
 - `sw   A(i) r1`
-- `b    dst`
 - `beq  r1 r2 dst`
 - `bne  r1 r2 dst`
 - `bgt  r1 r2 dst`
