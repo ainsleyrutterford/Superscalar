@@ -33,8 +33,8 @@ def main():
         cpu.execute(opcode, operands)               # execute
         cpu.instructions_executed += 1
         cpu_history.append(copy.deepcopy(cpu))
-    print(cpu.registers)
-    print(cpu.data_memory)
+    print('Registers: {0}'.format(cpu.registers))
+    print('Memory: {0}'.format(cpu.data_memory))
     print('{0} instructions executed in {1} cycles.'.format(cpu.instructions_executed, cpu.cycles))
     instructions_per_cycle = float(cpu.instructions_executed) / float(cpu.cycles)
     print('{0:.2f} instructions per cycle achieved.'.format(instructions_per_cycle))
