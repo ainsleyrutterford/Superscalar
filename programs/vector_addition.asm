@@ -15,11 +15,12 @@
     li $1 1                 ; int i = 1
 
 for:
-    
-    ; Do vector add here
-    
+    lw $3 A($1)             ; $3 = A[i]
+    lw $4 B($1)             ; $4 = B[i]
+    add $5 $3 $4            ; $5 = A[i] + B[i]
+    sw C($1) $5             ; c[i] = $5
     addi $1 $1 1            ; i++
     blt $1 $0 'for'         ; if (i < n) for loop again
-    
+
 for_done:
     li $10 1                ; set register 10 to 1
