@@ -23,3 +23,4 @@ less_than:                  ; else
 
 while_done:
     move $10 $0             ; %10 contains a = gcd
+    li $31 1                ; set register 31 to 1 (halt)

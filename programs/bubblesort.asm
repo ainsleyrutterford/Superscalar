@@ -41,4 +41,4 @@ for_done:
     j 'while'
 
 while_done:
-    li $10 1                ; set register 10 to 1
+    li $31 1                ; set register 31 to 1 (halt)

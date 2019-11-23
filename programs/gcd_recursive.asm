@@ -16,7 +16,7 @@
     jal 'gcd'              ; call gcd(a, b)
 
 gcd_done:                  ; return value is in $0
-    li $10 1               ; set register 10 to 1
+    li $31 1               ; set register 31 to 1 (halt)
 
 gcd:
     bne $0 $1 'not_equal'  ; if (a == b)

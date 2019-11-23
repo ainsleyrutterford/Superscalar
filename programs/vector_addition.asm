@@ -23,4 +23,4 @@ for:
     blt $1 $0 'for'         ; if (i < n) for loop again
 
 for_done:
-    li $10 1                ; set register 10 to 1
+    li $31 1                ; set register 31 to 1 (halt)

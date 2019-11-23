@@ -27,12 +27,13 @@ def main():
 
     cpu_history = []
 
-    while cpu.registers[10] == 0:
+    while cpu.is_running():
         instruction = cpu.fetch(program)            # fetch
         opcode, operands = cpu.decode(instruction)  # decode
         cpu.execute(opcode, operands)               # execute
         cpu.instructions_executed += 1
         cpu_history.append(copy.deepcopy(cpu))
+
     print('Registers: {0}'.format(cpu.registers))
     print('Memory: {0}'.format(cpu.data_memory))
     print('{0} instructions executed in {1} cycles.'.format(cpu.instructions_executed, cpu.cycles))

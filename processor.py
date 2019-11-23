@@ -4,10 +4,10 @@ class Processor:
         self.instruction_memory = []
         self.data_memory = []
         self.array_labels = {}
-        self.registers = [0] * 30
+        self.registers = [0] * 32
         self.cycles = 0
         self.instructions_executed = 0
-    
+
     def fetch(self, assembly):
         instruction = assembly.splitlines()[self.pc]
         self.pc += 1
@@ -79,3 +79,9 @@ class Processor:
         elif (opcode == 'move'):
             self.registers[int(operands[0][1:])] = self.registers[int(operands[1][1:])]
         self.cycles += 1
+    
+    def is_running(self):
+        if self.registers[31] == 0:
+            return True
+        else:
+            return False
