@@ -1,5 +1,4 @@
 import assembler
-import copy
 import processor
 import sys
 
@@ -25,14 +24,8 @@ def main():
     program = assembler.replace_labels(assembler.strip_comments(assembly))
     cpu = processor.Processor()
 
-    cpu_history = []
-
     while cpu.is_running():
-        instruction = cpu.fetch(program)            # fetch
-        opcode, operands = cpu.decode(instruction)  # decode
-        cpu.execute(opcode, operands)               # execute
-        cpu.instructions_executed += 1
-        cpu_history.append(copy.deepcopy(cpu))
+        cpu.cycle(program)
 
     print('Registers: {0}'.format(cpu.registers))
     print('Memory: {0}'.format(cpu.data_memory))

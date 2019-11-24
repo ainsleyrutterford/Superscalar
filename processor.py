@@ -1,3 +1,11 @@
+class Pipe:
+    def __init__(self, pc):
+        self.pc = pc
+        self.instruction = None
+        self.opcode = None
+        self.operand = None
+        self.stage = 'Fetch'
+
 class Processor:
     def __init__(self):
         self.pc = 0
@@ -7,11 +15,38 @@ class Processor:
         self.registers = [0] * 32
         self.cycles = 0
         self.instructions_executed = 0
+        self.pipeline = [None, None, None]
+
+    def fill_next_pipe(self):
+        if None in self.pipeline:
+            next_none = self.pipeline.index(None)
+            self.pipeline[next_none] = Pipe(self.pc)
+        # else:
+
+    
+    def execute_pipes(self, assembly):
+        for i, pipe in enumerate(self.pipeline):
+            if pipe != None:
+                if pipe.stage == 'Fetch':
+                    pipe.instruction = self.fetch(assembly)
+                    pipe.stage = 'Decode'
+                elif pipe.stage == 'Decode':
+                    (pipe.opcode, pipe.operand) = self.decode(pipe.instruction)
+                    # if is_branch(pipe.opcode):
+                    #     self.flush_pipeline()
+                    pipe.stage = 'Execute'
+                elif pipe.stage == 'Execute':
+                    self.execute(pipe.opcode, pipe.operand)
+                    self.pipeline[i] = None
+
+    def cycle(self, assembly):
+        self.fill_next_pipe()
+        self.execute_pipes(assembly)
+        self.cycles += 1
 
     def fetch(self, assembly):
         instruction = assembly.splitlines()[self.pc]
         self.pc += 1
-        self.cycles += 1
         return instruction
 
     def decode(self, instruction):
@@ -25,7 +60,6 @@ class Processor:
         else:
             opcode = instruction[:instruction.find(' ')]
             operands = instruction.split(' ')[1:]
-        self.cycles += 1
         return (opcode, operands)
     
     def execute(self, opcode, operands):
@@ -78,7 +112,7 @@ class Processor:
             self.data_memory[data_index] = self.registers[int(operands[1][1:])]
         elif (opcode == 'move'):
             self.registers[int(operands[0][1:])] = self.registers[int(operands[1][1:])]
-        self.cycles += 1
+        self.instructions_executed += 1
     
     def is_running(self):
         if self.registers[31] == 0:
