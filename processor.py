@@ -15,14 +15,16 @@ class Processor:
         self.registers = [0] * 32
         self.cycles = 0
         self.instructions_executed = 0
-        self.pipeline = [None, None, None]
+        self.pipeline_width = 3
+        self.pipeline = [None] * self.pipeline_width
 
     def fill_next_pipe(self):
-        next_none = self.pipeline.index(None)
-        self.pipeline[next_none] = Pipe(self.pc)
+        if (None in self.pipeline):
+            next_none = self.pipeline.index(None)
+            self.pipeline[next_none] = Pipe(self.pc)
 
     def flush_pipeline(self):
-        self.pipeline = [None, None, None]
+        self.pipeline = [None] * self.pipeline_width
     
     def execute_pipes(self, assembly):
         for i, pipe in enumerate(self.pipeline):
