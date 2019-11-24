@@ -25,14 +25,10 @@ class Processor:
         self.pipeline = [None, None, None]
     
     def execute_pipes(self, assembly):
-        fetches = 0
-        branched = False
         for i, pipe in enumerate(self.pipeline):
             if pipe != None:
                 if pipe.stage == 'Fetch':
                     pipe.instruction = self.fetch(assembly)
-                    if not branched:
-                        self.pc += 1
                     pipe.stage = 'Decode'
                 elif pipe.stage == 'Decode':
                     (pipe.opcode, pipe.operand) = self.decode(pipe.instruction)
@@ -41,8 +37,8 @@ class Processor:
                     branch = self.execute(pipe.opcode, pipe.operand, pipe.pc)
                     self.pipeline[i] = None
                     if branch:
-                        branched = True
                         self.flush_pipeline()
+                        return
 
     def cycle(self, assembly):
         self.fill_next_pipe()
@@ -54,6 +50,7 @@ class Processor:
             instruction = 'nop'
         else:
             instruction = assembly.splitlines()[self.pc]
+        self.pc += 1
         return instruction
 
     def decode(self, instruction):
@@ -99,7 +96,7 @@ class Processor:
             self.pc = self.registers[int(operands[0][1:])]
             return True
         elif (opcode == 'jal'):
-            self.registers[29] = pipe_pc
+            self.registers[29] = pipe_pc + 1
             self.pc = int(operands[0])
             return True
         elif (opcode == 'li'):
