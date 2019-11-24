@@ -18,26 +18,31 @@ class Processor:
         self.pipeline = [None, None, None]
 
     def fill_next_pipe(self):
-        if None in self.pipeline:
-            next_none = self.pipeline.index(None)
-            self.pipeline[next_none] = Pipe(self.pc)
-        # else:
+        next_none = self.pipeline.index(None)
+        self.pipeline[next_none] = Pipe(self.pc)
 
+    def flush_pipeline(self):
+        self.pipeline = [None, None, None]
     
     def execute_pipes(self, assembly):
+        fetches = 0
+        branched = False
         for i, pipe in enumerate(self.pipeline):
             if pipe != None:
                 if pipe.stage == 'Fetch':
                     pipe.instruction = self.fetch(assembly)
+                    if not branched:
+                        self.pc += 1
                     pipe.stage = 'Decode'
                 elif pipe.stage == 'Decode':
                     (pipe.opcode, pipe.operand) = self.decode(pipe.instruction)
-                    # if is_branch(pipe.opcode):
-                    #     self.flush_pipeline()
                     pipe.stage = 'Execute'
                 elif pipe.stage == 'Execute':
-                    self.execute(pipe.opcode, pipe.operand)
+                    branch = self.execute(pipe.opcode, pipe.operand, pipe.pc)
                     self.pipeline[i] = None
+                    if branch:
+                        branched = True
+                        self.flush_pipeline()
 
     def cycle(self, assembly):
         self.fill_next_pipe()
@@ -45,8 +50,10 @@ class Processor:
         self.cycles += 1
 
     def fetch(self, assembly):
-        instruction = assembly.splitlines()[self.pc]
-        self.pc += 1
+        if (self.pc >= len(assembly.splitlines())):
+            instruction = 'nop'
+        else:
+            instruction = assembly.splitlines()[self.pc]
         return instruction
 
     def decode(self, instruction):
@@ -62,7 +69,7 @@ class Processor:
             operands = instruction.split(' ')[1:]
         return (opcode, operands)
     
-    def execute(self, opcode, operands):
+    def execute(self, opcode, operands, pipe_pc):
         if   (opcode == 'addi'):
             self.registers[int(operands[0][1:])] = self.registers[int(operands[1][1:])] + int(operands[2])
         elif (opcode == 'add'):
@@ -72,22 +79,29 @@ class Processor:
         elif (opcode == 'beq'):
             if (self.registers[int(operands[0][1:])] == self.registers[int(operands[1][1:])]):
                 self.pc = int(operands[2])
+                return True
         elif (opcode == 'bne'):
             if (self.registers[int(operands[0][1:])] != self.registers[int(operands[1][1:])]):
                 self.pc = int(operands[2])
+                return True
         elif (opcode == 'ble'):
             if (self.registers[int(operands[0][1:])] <= self.registers[int(operands[1][1:])]):
                 self.pc = int(operands[2])
+                return True
         elif (opcode == 'blt'):
             if (self.registers[int(operands[0][1:])] <  self.registers[int(operands[1][1:])]):
                 self.pc = int(operands[2])
+                return True
         elif (opcode == 'j'):
             self.pc = int(operands[0])
+            return True
         elif (opcode == 'jr'):
             self.pc = self.registers[int(operands[0][1:])]
+            return True
         elif (opcode == 'jal'):
-            self.registers[29] = self.pc
+            self.registers[29] = pipe_pc
             self.pc = int(operands[0])
+            return True
         elif (opcode == 'li'):
             self.registers[int(operands[0][1:])] = int(operands[1])
         elif (opcode == 'lw'):
@@ -113,6 +127,7 @@ class Processor:
         elif (opcode == 'move'):
             self.registers[int(operands[0][1:])] = self.registers[int(operands[1][1:])]
         self.instructions_executed += 1
+        return False
     
     def is_running(self):
         if self.registers[31] == 0:

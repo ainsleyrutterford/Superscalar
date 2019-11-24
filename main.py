@@ -27,6 +27,9 @@ def main():
     while cpu.is_running():
         cpu.cycle(program)
 
+    # for i in range(100):
+    #     cpu.cycle(program)
+
     print('Registers: {0}'.format(cpu.registers))
     print('Memory: {0}'.format(cpu.data_memory))
     print('{0} instructions executed in {1} cycles.'.format(cpu.instructions_executed, cpu.cycles))
