@@ -15,17 +15,26 @@ class ROB:
 class RS:
 
     class RS_entry:
-        def __init__(self):
-            self.busy       = False
-            self.op         = None
-            self.val1       = None
-            self.val2       = None
-            self.wait1      = None
-            self.wait2      = None
+        def __init__(self, op, dest, tag1, tag2, val1, val2):
+            self.op         = op
+            self.dest       = dest
+            self.tag1       = tag1
+            self.tag2       = tag2
+            self.val1       = val1
+            self.val2       = val2
             self.dispatched = False
         
     def __init__(self):
-        self.entries = [RS.RS_entry()] * 128
+        self.entries = [None] * 128
+
+    def split(self, opcode, operands):
+        if opcode == 'add':
+            return (opcode, operands[0], operands[1], operands[2], None, None)
+
+    def fill_next(self, op, dest, tag1, tag2, val1, val2):
+        if None in self.entries:
+            next_none = self.entries.index(None)
+            self.entries[next_none] = RS.RS_entry(op, dest, tag1, tag2, val1, val2)
 
 
 class Processor:
@@ -36,7 +45,7 @@ class Processor:
         self.rf = [0] * 32
         self.mem = []
         self.rob = ROB()
-        self.rat = [0] * 128
+        self.rat = [None] * 128
         self.rs = RS()
 
         self.cycles = 0
@@ -46,8 +55,9 @@ class Processor:
     def cycle(self, assembly):
         instruction = self.fetch(assembly)
         opcode, operands = self.decode(instruction)
-        self.execute(opcode, operands, self.pc)
-        self.cycles += 3
+        self.issue(opcode, operands)
+        # self.execute(opcode, operands, self.pc)
+        # self.cycles += 3
 
     def fetch(self, assembly):
         if (self.pc >= len(assembly.splitlines())):
@@ -70,12 +80,16 @@ class Processor:
             operands = instruction.split(' ')[1:]
         return (opcode, operands)
     
-    def issue(self):
+    def issue(self, opcode, operands):
+        op, dest, tag1, tag2, val1, val2 = self.rs.split(opcode, operands)
         # 1. Place next instruction from iq into the next available space in the rs.
+        self.rs.fill_next(op, dest, tag1, tag2, val1, val2)
         # 2. Set the rob_entry.reg at the issue pointer to be the dest register of the instruction.
         #    Set the rob_entry.done to False.
+        self.rob.entries[self.rob.issue].reg  = dest
+        self.rob.entries[self.rob.issue].done = False
         # 3. Update the rat of the dest register to point to the rob_entry.
-        pass
+        self.rat[int(dest[1:])] = self.rob.entries[self.rob.issue]
 
     def dispatch(self):
         # 1. Check if operands are available and ready.
