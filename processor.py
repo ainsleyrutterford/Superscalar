@@ -31,15 +31,17 @@ class RS:
 class Processor:
     def __init__(self):
         self.pc = 0
+
         self.iq = []
-        self.mem = []
-        self.array_labels = {}
         self.rf = [0] * 32
-        self.cycles = 0
-        self.executed = 0
+        self.mem = []
         self.rob = ROB()
         self.rat = [0] * 128
         self.rs = RS()
+
+        self.cycles = 0
+        self.executed = 0
+        self.array_labels = {}
 
     def cycle(self, assembly):
         instruction = self.fetch(assembly)
@@ -68,6 +70,34 @@ class Processor:
             operands = instruction.split(' ')[1:]
         return (opcode, operands)
     
+    def issue(self):
+        # 1. Place next instruction from iq into the next available space in the rs.
+        # 2. Set the rob_entry.reg at the issue pointer to be the dest register of the instruction.
+        #    Set the rob_entry.done to False.
+        # 3. Update the rat of the dest register to point to the rob_entry.
+        pass
+
+    def dispatch(self):
+        # 1. Check if operands are available and ready.
+        # 2. Send the instruction to execute.
+        #    The instruction carries a name (or tag) of the rob_entry used.
+        # 3. Free the rs of the instruction.
+        pass
+    
+    def write_back(self):
+        # 1. Broadcast the name (or tag) and the value of the completed instruction
+        #    back to the rs so that the rs can 'capture' the values.
+        # 2. Place the broadcast value into the rob_entry used for that instruction.
+        #    Set rob_entry.done to True
+        pass
+    
+    def commit(self):
+        # 1. Test if next instruction at commit pointer of rob is done.
+        # 2. If it is done, commit:
+        #        a. Write the rob_entry.val to the rob_entry.reg.
+        #        b. Update rat to point to rob_entry.reg instead of rob_entry
+        pass
+
     def execute(self, opcode, operands, current_pc):
         if   (opcode == 'addi'):
             self.rf[int(operands[0][1:])] = self.rf[int(operands[1][1:])] + int(operands[2])
