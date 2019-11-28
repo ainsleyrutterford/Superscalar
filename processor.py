@@ -7,7 +7,7 @@ class ROB:
             self.done = None
     
     def __init__(self):
-        self.entries = [ROB.ROB_entry()] * 128
+        self.entries = [ROB.ROB_entry()] * 2048
         self.commit  = 0
         self.issue   = 0
 
@@ -95,7 +95,10 @@ class Processor:
         # 1. Test if next instruction at commit pointer of rob is done.
         # 2. If it is done, commit:
         #        a. Write the rob_entry.val to the rob_entry.reg.
-        #        b. Update rat to point to rob_entry.reg instead of rob_entry
+        #        b. If rob_entry is latest rename of rat for rob_entry.reg, 
+        #               update rat to point to rob_entry.reg instead of rob_entry
+        #           else:
+        #               leave rat entry as is
         pass
 
     def execute(self, opcode, operands, current_pc):
