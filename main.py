@@ -26,8 +26,8 @@ cpu = processor.Processor()
 while cpu.is_running():
     cpu.cycle(program)
 
-print(f'Registers: {cpu.registers}')
-print(f'Memory: {cpu.data_memory}')
-print(f'{cpu.instructions_executed} instructions executed in {cpu.cycles} cycles.')
-instructions_per_cycle = float(cpu.instructions_executed) / float(cpu.cycles)
+print(f'Registers: {cpu.rf}')
+print(f'Memory: {cpu.mem}')
+print(f'{cpu.executed} instructions executed in {cpu.cycles} cycles.')
+instructions_per_cycle = float(cpu.executed) / float(cpu.cycles)
 print(f'{instructions_per_cycle:.2f} instructions per cycle achieved.')
