@@ -57,7 +57,8 @@ class Processor:
         self.pc = 0
 
         self.iq = []
-        self.rf = [0] * 32
+        # self.rf = [0] * 32
+        self.rf = [12, 4, 7, 2, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         self.mem = []
         self.rob = ROB()
         self.rat = [None] * 128
@@ -77,6 +78,7 @@ class Processor:
         if (len(self.eq) > 0):
             self.execute()
         self.write_back()
+        self.commit()
         # self.cycles += 3
 
     def fetch(self, assembly):
@@ -102,20 +104,26 @@ class Processor:
     
     def issue(self, opcode, operands):
         op, dest, tag1, tag2, val1, val2 = self.rs.split(opcode, operands)
+        # 1. Place next instruction from iq into the next available space in the rs.
+        if self.rat[int(tag1[1:])] == None:
+            val1 = self.rf[int(tag1[1:])]
+            tag1 = None
+        if self.rat[int(tag2[1:])] == None:
+            val2 = self.rf[int(tag2[1:])]
+            tag2 = None
+        self.rs.fill_next(op, self.rob.issue, tag1, tag2, val1, val2)
         # 2. Set the rob_entry.reg at the issue pointer to be the dest register of the instruction.
         #    Set the rob_entry.done to False.
-        self.rob.entries[self.rob.issue].reg  = dest
+        self.rob.entries[self.rob.issue].reg  = int(dest[1:])
         self.rob.entries[self.rob.issue].done = False
         # 3. Update the rat of the dest register to point to the rob_entry.
         self.rat[int(dest[1:])] = self.rob.issue
-        # 1. Place next instruction from iq into the next available space in the rs.
-        self.rs.fill_next(op, self.rob.issue, tag1, tag2, val1, val2)
         # Increment the rob issue pointer.
         self.rob.issue += 1
 
     def dispatch(self):
         # 1. Check if operands are available and ready.
-        self.rs.entries[1] = RS.RS_entry('add', 1, None, None, 12, 13) # REMOVE THIS JUST FOR TESTING
+        # self.rs.entries[1] = RS.RS_entry('add', 1, None, None, 12, 13) # REMOVE THIS JUST FOR TESTING
         ready_index = self.rs.find_next_ready()
         # 2. Send the instruction to execute.
         #    The instruction carries a name (or tag) of the rob_entry used.
@@ -141,7 +149,15 @@ class Processor:
         #               update rat to point to rob_entry.reg instead of rob_entry
         #           else:
         #               leave rat entry as is
-        pass
+        rob_entry = self.rob.entries[self.rob.commit]
+        if rob_entry.done == True:
+            self.rf[rob_entry.reg] = rob_entry.val
+            reg = self.rob.entries[self.rob.commit].reg
+            if self.rat[reg] == self.rob.commit:
+                self.rat[reg] = None
+            self.rob.entries[self.rob.commit] = None
+            self.rob.commit += 1
+
 
     def execute(self):
         rs_entry = self.eq.pop(0)

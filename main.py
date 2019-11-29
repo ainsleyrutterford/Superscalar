@@ -27,9 +27,10 @@ cpu = processor.Processor()
 #     cpu.cycle(program)
 
 cpu.cycle(program)
+cpu.cycle(program)
 
-print(cpu.rob.entries[0].reg)
-print(cpu.rs.entries[0].op)
+# print(cpu.rob.entries[0].reg)
+# print(cpu.rs.entries[0].op)
 
 print(f'Registers: {cpu.rf}')
 print(f'Memory: {cpu.mem}')
