@@ -29,9 +29,10 @@ class RS:
     def __init__(self):
         self.entries = [None] * 128
 
-    def split(self, opcode, operands):
+    def split(self, op_tuple):
+        opcode = op_tuple[0]
+        operands = op_tuple[1]
         if opcode in opcodes.arithmetic_ops:
-            print('yes')
             return (opcode, operands[0], operands[1], operands[2], None, None)
 
     def fill_next(self, op, dest_tag, tag1, tag2, val1, val2):
@@ -60,6 +61,7 @@ class Processor:
         self.pc = 0
 
         self.iq = []
+        self.opq = []
         # self.rf = [0] * 32
         self.rf = [12, 4, 7, 2, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         self.mem = []
@@ -74,21 +76,25 @@ class Processor:
         self.array_labels = {}
 
     def cycle(self, assembly):
-        instruction = self.fetch(assembly)
-        opcode, operands = self.decode(instruction)
-        self.issue(opcode, operands)
-        self.dispatch()
-        if (len(self.eq) > 0):
-            self.execute()
-        self.write_back()
         self.commit()
+        self.write_back()
+        if len(self.eq) > 0:
+            self.execute()
+        self.dispatch()
+        if len(self.opq) > 0:
+            self.issue(self.opq.pop(0))
+        if len(self.iq) > 0:
+            self.opq.append(self.decode(self.iq.pop(0)))
+        if self.pc < len(assembly.splitlines()):
+            self.iq.append(self.fetch(assembly))
+        print(self.iq)
+        print(self.opq)
+        print(self.rf)
+        print([f'{e.reg}, {e.val}, {e.done}' for e in self.rob.entries[:4]])
         # self.cycles += 3
 
     def fetch(self, assembly):
-        if (self.pc >= len(assembly.splitlines())):
-            instruction = 'nop'
-        else:
-            instruction = assembly.splitlines()[self.pc]
+        instruction = assembly.splitlines()[self.pc]
         self.pc += 1
         return instruction
 
@@ -101,12 +107,16 @@ class Processor:
             opcode = 'nop'
             operands = []
         else:
-            opcode = instruction[:instruction.find(' ')]
-            operands = instruction.split(' ')[1:]
+            if instruction == 'nop':
+                opcode = 'nop'
+                operands = []
+            else:
+                opcode = instruction[:instruction.find(' ')]
+                operands = instruction.split(' ')[1:]
         return (opcode, operands)
     
-    def issue(self, opcode, operands):
-        op, dest, tag1, tag2, val1, val2 = self.rs.split(opcode, operands)
+    def issue(self, op_tuple):
+        op, dest, tag1, tag2, val1, val2 = self.rs.split(op_tuple)
         # 1. Place next instruction from iq into the next available space in the rs.
         if self.rat[int(tag1[1:])] == None:
             val1 = self.rf[int(tag1[1:])]
@@ -128,21 +138,23 @@ class Processor:
         # 1. Check if operands are available and ready.
         # self.rs.entries[1] = RS.RS_entry('add', 1, None, None, 12, 13) # REMOVE THIS JUST FOR TESTING
         ready_index = self.rs.find_next_ready()
-        # 2. Send the instruction to execute.
-        #    The instruction carries a name (or tag) of the rob_entry used.
-        self.eq.append( self.rs.entries[ready_index] )
-        # 3. Free the rs of the instruction.
-        self.rs.entries[ready_index] = None
+        if ready_index != None:
+            # 2. Send the instruction to execute.
+            #    The instruction carries a name (or tag) of the rob_entry used.
+            self.eq.append( self.rs.entries[ready_index] )
+            # 3. Free the rs of the instruction.
+            self.rs.entries[ready_index] = None
     
     def write_back(self):
-        # 1. Broadcast the name (or tag) and the value of the completed instruction
-        #    back to the rs so that the rs can 'capture' the values.
-        tag, val = self.wbq.pop(0)
-        self.rs.capture(tag, val)
-        # 2. Place the broadcast value into the rob_entry used for that instruction.
-        #    Set rob_entry.done to True
-        self.rob.entries[tag].val = val
-        self.rob.entries[tag].done = True
+        if len(self.wbq) > 0:
+            # 1. Broadcast the name (or tag) and the value of the completed instruction
+            #    back to the rs so that the rs can 'capture' the values.
+            tag, val = self.wbq.pop(0)
+            self.rs.capture(tag, val)
+            # 2. Place the broadcast value into the rob_entry used for that instruction.
+            #    Set rob_entry.done to True
+            self.rob.entries[tag].val = val
+            self.rob.entries[tag].done = True
     
     def commit(self):
         # 1. Test if next instruction at commit pointer of rob is done.
@@ -158,7 +170,7 @@ class Processor:
             reg = self.rob.entries[self.rob.commit].reg
             if self.rat[reg] == self.rob.commit:
                 self.rat[reg] = None
-            self.rob.entries[self.rob.commit] = None
+            self.rob.entries[self.rob.commit] = ROB.ROB_entry()
             self.rob.commit += 1
 
 
