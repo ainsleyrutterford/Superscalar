@@ -7,7 +7,7 @@ class ROB:
             self.done = None
     
     def __init__(self):
-        self.entries = [ROB.ROB_entry()] * 2048
+        self.entries = [ROB.ROB_entry() for i in range(2048)]
         self.commit  = 0
         self.issue   = 0
 
@@ -15,9 +15,9 @@ class ROB:
 class RS:
 
     class RS_entry:
-        def __init__(self, op, dest, tag1, tag2, val1, val2):
+        def __init__(self, op, dest_tag, tag1, tag2, val1, val2):
             self.op         = op
-            self.dest       = dest
+            self.dest_tag   = dest_tag
             self.tag1       = tag1
             self.tag2       = tag2
             self.val1       = val1
@@ -31,10 +31,16 @@ class RS:
         if opcode == 'add':
             return (opcode, operands[0], operands[1], operands[2], None, None)
 
-    def fill_next(self, op, dest, tag1, tag2, val1, val2):
+    def fill_next(self, op, dest_tag, tag1, tag2, val1, val2):
         if None in self.entries:
             next_none = self.entries.index(None)
-            self.entries[next_none] = RS.RS_entry(op, dest, tag1, tag2, val1, val2)
+            self.entries[next_none] = RS.RS_entry(op, dest_tag, tag1, tag2, val1, val2)
+    
+    def find_next_ready(self):
+        for i, entry in enumerate(self.entries):
+            if entry != None:
+                if entry.val1 != None and entry.val2 != None and entry.dispatched == False:
+                    return i
 
 
 class Processor:
@@ -47,6 +53,8 @@ class Processor:
         self.rob = ROB()
         self.rat = [None] * 128
         self.rs = RS()
+        self.eq = []
+        self.bq = []
 
         self.cycles = 0
         self.executed = 0
@@ -56,7 +64,10 @@ class Processor:
         instruction = self.fetch(assembly)
         opcode, operands = self.decode(instruction)
         self.issue(opcode, operands)
-        # self.execute(opcode, operands, self.pc)
+        self.dispatch()
+        if (len(self.eq) > 0):
+            self.execute()
+        self.write_back()
         # self.cycles += 3
 
     def fetch(self, assembly):
@@ -82,21 +93,27 @@ class Processor:
     
     def issue(self, opcode, operands):
         op, dest, tag1, tag2, val1, val2 = self.rs.split(opcode, operands)
-        # 1. Place next instruction from iq into the next available space in the rs.
-        self.rs.fill_next(op, dest, tag1, tag2, val1, val2)
         # 2. Set the rob_entry.reg at the issue pointer to be the dest register of the instruction.
         #    Set the rob_entry.done to False.
         self.rob.entries[self.rob.issue].reg  = dest
         self.rob.entries[self.rob.issue].done = False
         # 3. Update the rat of the dest register to point to the rob_entry.
-        self.rat[int(dest[1:])] = self.rob.entries[self.rob.issue]
+        self.rat[int(dest[1:])] = self.rob.issue
+        # 1. Place next instruction from iq into the next available space in the rs.
+        self.rs.fill_next(op, self.rob.issue, tag1, tag2, val1, val2)
+        # Increment the rob issue pointer.
+        self.rob.issue += 1
 
     def dispatch(self):
         # 1. Check if operands are available and ready.
+        self.rs.entries[1] = RS.RS_entry('add', 1, None, None, 12, 13) # REMOVE THIS JUST FOR TESTING
+        ready_index = self.rs.find_next_ready()
         # 2. Send the instruction to execute.
         #    The instruction carries a name (or tag) of the rob_entry used.
+        self.eq.append( self.rs.entries[ready_index] )
+        print(self.eq)
         # 3. Free the rs of the instruction.
-        pass
+        self.rs.entries[ready_index] = None
     
     def write_back(self):
         # 1. Broadcast the name (or tag) and the value of the completed instruction
@@ -115,7 +132,13 @@ class Processor:
         #               leave rat entry as is
         pass
 
-    def execute(self, opcode, operands, current_pc):
+    def execute(self):
+        rs_entry = self.eq.pop(0)
+        if rs_entry.op == 'add':
+            self.bq.append( (rs_entry.dest_tag, rs_entry.val1 + rs_entry.val2) )
+
+
+    def execute_old(self, opcode, operands, current_pc):
         if   (opcode == 'addi'):
             self.rf[int(operands[0][1:])] = self.rf[int(operands[1][1:])] + int(operands[2])
         elif (opcode == 'add'):

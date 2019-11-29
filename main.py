@@ -28,6 +28,9 @@ cpu = processor.Processor()
 
 cpu.cycle(program)
 
+print(cpu.rob.entries[0].reg)
+print(cpu.rs.entries[0].op)
+
 print(f'Registers: {cpu.rf}')
 print(f'Memory: {cpu.mem}')
 print(f'{cpu.executed} instructions executed in {cpu.cycles} cycles.')
