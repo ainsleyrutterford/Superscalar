@@ -42,6 +42,15 @@ class RS:
                 if entry.val1 != None and entry.val2 != None and entry.dispatched == False:
                     return i
 
+    def capture(self, tag, val):
+        for entry in self.entries:
+            if entry != None:
+                if entry.tag1 == tag:
+                    entry.val1 = val
+                    entry.tag1 = None
+                if entry.tag2 == tag:
+                    entry.val2 = val
+                    entry.tag2 = None
 
 class Processor:
     def __init__(self):
@@ -54,7 +63,7 @@ class Processor:
         self.rat = [None] * 128
         self.rs = RS()
         self.eq = []
-        self.bq = []
+        self.wbq = []
 
         self.cycles = 0
         self.executed = 0
@@ -111,16 +120,18 @@ class Processor:
         # 2. Send the instruction to execute.
         #    The instruction carries a name (or tag) of the rob_entry used.
         self.eq.append( self.rs.entries[ready_index] )
-        print(self.eq)
         # 3. Free the rs of the instruction.
         self.rs.entries[ready_index] = None
     
     def write_back(self):
         # 1. Broadcast the name (or tag) and the value of the completed instruction
         #    back to the rs so that the rs can 'capture' the values.
+        tag, val = self.wbq.pop(0)
+        self.rs.capture(tag, val)
         # 2. Place the broadcast value into the rob_entry used for that instruction.
         #    Set rob_entry.done to True
-        pass
+        self.rob.entries[tag].val = val
+        self.rob.entries[tag].done = True
     
     def commit(self):
         # 1. Test if next instruction at commit pointer of rob is done.
@@ -135,7 +146,7 @@ class Processor:
     def execute(self):
         rs_entry = self.eq.pop(0)
         if rs_entry.op == 'add':
-            self.bq.append( (rs_entry.dest_tag, rs_entry.val1 + rs_entry.val2) )
+            self.wbq.append( (rs_entry.dest_tag, rs_entry.val1 + rs_entry.val2) )
 
 
     def execute_old(self, opcode, operands, current_pc):
