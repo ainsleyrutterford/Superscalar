@@ -87,11 +87,15 @@ class Processor:
             self.opq.append(self.decode(self.iq.pop(0)))
         if self.pc < len(assembly.splitlines()):
             self.iq.append(self.fetch(assembly))
-        print(self.iq)
-        print(self.opq)
-        print(self.rf)
-        print([f'{e.reg}, {e.val}, {e.done}' for e in self.rob.entries[:4]])
-        # self.cycles += 3
+        self.cycles += 1
+        print(f'cycle: {self.cycles}')
+        print(f'instruction queue: {self.iq}')
+        print(f'op queue: {self.opq}')
+        print(f'register file: {self.rf}')
+        print(f'rob: { [f"{e.reg}, {e.val}, {e.done}" for e in self.rob.entries[:6]] }')
+        print(f'rat: {self.rat[:6]}')
+        print(f'res station: { [f"{rs.op}, {rs.dest_tag}, {rs.tag1}, {rs.tag2}, {rs.val1}, {rs.val2}" for rs in filter(None, self.rs.entries[:6])] }')
+        print(f'writeback queue: {self.wbq}')
 
     def fetch(self, assembly):
         instruction = assembly.splitlines()[self.pc]
@@ -121,9 +125,13 @@ class Processor:
         if self.rat[int(tag1[1:])] == None:
             val1 = self.rf[int(tag1[1:])]
             tag1 = None
+        else:
+            tag1 = self.rat[int(tag1[1:])]
         if self.rat[int(tag2[1:])] == None:
             val2 = self.rf[int(tag2[1:])]
             tag2 = None
+        else:
+            tag2 = self.rat[int(tag2[1:])]
         self.rs.fill_next(op, self.rob.issue, tag1, tag2, val1, val2)
         # 2. Set the rob_entry.reg at the issue pointer to be the dest register of the instruction.
         #    Set the rob_entry.done to False.
