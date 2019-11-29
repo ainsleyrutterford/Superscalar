@@ -26,11 +26,8 @@ cpu = processor.Processor()
 # while cpu.is_running():
 #     cpu.cycle(program)
 
-cpu.cycle(program)
-cpu.cycle(program)
-
-# print(cpu.rob.entries[0].reg)
-# print(cpu.rs.entries[0].op)
+for i in range(len(program.splitlines())):
+    cpu.cycle(program)
 
 print(f'Registers: {cpu.rf}')
 print(f'Memory: {cpu.mem}')

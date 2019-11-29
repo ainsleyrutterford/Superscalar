@@ -1,3 +1,5 @@
+import opcodes
+
 class ROB:
 
     class ROB_entry:
@@ -28,7 +30,8 @@ class RS:
         self.entries = [None] * 128
 
     def split(self, opcode, operands):
-        if opcode == 'add':
+        if opcode in opcodes.arithmetic_ops:
+            print('yes')
             return (opcode, operands[0], operands[1], operands[2], None, None)
 
     def fill_next(self, op, dest_tag, tag1, tag2, val1, val2):
@@ -163,6 +166,8 @@ class Processor:
         rs_entry = self.eq.pop(0)
         if rs_entry.op == 'add':
             self.wbq.append( (rs_entry.dest_tag, rs_entry.val1 + rs_entry.val2) )
+        if rs_entry.op == 'sub':
+            self.wbq.append( (rs_entry.dest_tag, rs_entry.val1 - rs_entry.val2) )
 
 
     def execute_old(self, opcode, operands, current_pc):
