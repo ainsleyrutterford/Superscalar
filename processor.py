@@ -154,15 +154,18 @@ class Processor:
             self.rs.entries[ready_index] = None
     
     def write_back(self):
+        self.decrement_wbq_cycles()
         if len(self.wbq) > 0:
-            # 1. Broadcast the name (or tag) and the value of the completed instruction
-            #    back to the rs so that the rs can 'capture' the values.
-            tag, val = self.wbq.pop(0)
-            self.rs.capture(tag, val)
-            # 2. Place the broadcast value into the rob_entry used for that instruction.
-            #    Set rob_entry.done to True
-            self.rob.entries[tag].val = val
-            self.rob.entries[tag].done = True
+            # Only write back if it has been enough cycles
+            if self.wbq[0][2] == 0:
+                # 1. Broadcast the name (or tag) and the value of the completed instruction
+                #    back to the rs so that the rs can 'capture' the values.
+                tag, val, cycles = self.wbq.pop(0)
+                self.rs.capture(tag, val)
+                # 2. Place the broadcast value into the rob_entry used for that instruction.
+                #    Set rob_entry.done to True
+                self.rob.entries[tag].val = val
+                self.rob.entries[tag].done = True
     
     def commit(self):
         # 1. Test if next instruction at commit pointer of rob is done.
@@ -185,9 +188,10 @@ class Processor:
     def execute(self):
         rs_entry = self.eq.pop(0)
         if rs_entry.op == 'add':
-            self.wbq.append( (rs_entry.dest_tag, rs_entry.val1 + rs_entry.val2) )
+            # Last entry is how many cycles it will take to execute
+            self.wbq.append( [rs_entry.dest_tag, rs_entry.val1 + rs_entry.val2, 2] )
         if rs_entry.op == 'sub':
-            self.wbq.append( (rs_entry.dest_tag, rs_entry.val1 - rs_entry.val2) )
+            self.wbq.append( [rs_entry.dest_tag, rs_entry.val1 - rs_entry.val2, 2] )
 
 
     def execute_old(self, opcode, operands, current_pc):
@@ -242,6 +246,11 @@ class Processor:
             self.rf[int(operands[0][1:])] = self.rf[int(operands[1][1:])]
         self.executed += 1
     
+    def decrement_wbq_cycles(self):
+        if len(self.wbq) > 0:
+            for wb in self.wbq:
+                wb[2] -= 1
+
     def is_running(self):
         if self.rf[31] == 0:
             return True
