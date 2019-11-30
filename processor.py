@@ -144,14 +144,15 @@ class Processor:
 
     def dispatch(self):
         # 1. Check if operands are available and ready.
-        # self.rs.entries[1] = RS.RS_entry('add', 1, None, None, 12, 13) # REMOVE THIS JUST FOR TESTING
         ready_index = self.rs.find_next_ready()
         if ready_index != None:
-            # 2. Send the instruction to execute.
-            #    The instruction carries a name (or tag) of the rob_entry used.
-            self.eq.append( self.rs.entries[ready_index] )
-            # 3. Free the rs of the instruction.
-            self.rs.entries[ready_index] = None
+            op = self.rs.entries[ready_index].op
+            if self.execute_available(op):
+                # 2. Send the instruction to execute.
+                #    The instruction carries a name (or tag) of the rob_entry used.
+                self.eq.append( self.rs.entries[ready_index] )
+                # 3. Free the rs of the instruction.
+                self.rs.entries[ready_index] = None
     
     def write_back(self):
         self.decrement_wbq_cycles()
@@ -160,7 +161,7 @@ class Processor:
             if self.wbq[0][2] == 0:
                 # 1. Broadcast the name (or tag) and the value of the completed instruction
                 #    back to the rs so that the rs can 'capture' the values.
-                tag, val, cycles = self.wbq.pop(0)
+                tag, val, cycles, op = self.wbq.pop(0)
                 self.rs.capture(tag, val)
                 # 2. Place the broadcast value into the rob_entry used for that instruction.
                 #    Set rob_entry.done to True
@@ -188,10 +189,10 @@ class Processor:
     def execute(self):
         rs_entry = self.eq.pop(0)
         if rs_entry.op == 'add':
-            # Last entry is how many cycles it will take to execute
-            self.wbq.append( [rs_entry.dest_tag, rs_entry.val1 + rs_entry.val2, 2] )
+            # Third entry is how many cycles it will take to execute
+            self.wbq.append( [rs_entry.dest_tag, rs_entry.val1 + rs_entry.val2, 2, rs_entry.op] )
         if rs_entry.op == 'sub':
-            self.wbq.append( [rs_entry.dest_tag, rs_entry.val1 - rs_entry.val2, 2] )
+            self.wbq.append( [rs_entry.dest_tag, rs_entry.val1 - rs_entry.val2, 2, rs_entry.op] )
 
 
     def execute_old(self, opcode, operands, current_pc):
@@ -246,6 +247,15 @@ class Processor:
             self.rf[int(operands[0][1:])] = self.rf[int(operands[1][1:])]
         self.executed += 1
     
+    def execute_available(self, op):
+        in_use = 0
+        if op in opcodes.arithmetic_ops:
+            in_use = sum(1 for wb in self.wbq if wb[3] in opcodes.arithmetic_ops)
+        if in_use < 2:
+            return True
+        else:
+            return False
+
     def decrement_wbq_cycles(self):
         if len(self.wbq) > 0:
             for wb in self.wbq:
