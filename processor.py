@@ -32,7 +32,7 @@ class RS:
     def split(self, op_tuple):
         opcode = op_tuple[0]
         operands = op_tuple[1]
-        if opcode in opcodes.arithmetic_ops:
+        if opcode in opcodes.arithmetic or opcode in opcodes.advanced:
             return (opcode, operands[0], operands[1], operands[2], None, None)
 
     def fill_next(self, op, dest_tag, tag1, tag2, val1, val2):
@@ -76,8 +76,6 @@ class Processor:
         self.array_labels = {}
 
     def cycle(self, assembly):
-        self.commit()
-        self.write_back()
         if len(self.eq) > 0:
             self.execute()
         self.dispatch()
@@ -87,8 +85,11 @@ class Processor:
             self.opq.append(self.decode(self.iq.pop(0)))
         if self.pc < len(assembly.splitlines()):
             self.iq.append(self.fetch(assembly))
+        self.write_back()
+        self.commit()
         self.cycles += 1
         print(f'cycle: {self.cycles}')
+        print(f'executed: {self.executed}')
         print(f'instruction queue: {self.iq}')
         print(f'op queue: {self.opq}')
         print(f'register file: {self.rf}')
@@ -179,11 +180,11 @@ class Processor:
         rob_entry = self.rob.entries[self.rob.commit]
         if rob_entry.done == True:
             self.rf[rob_entry.reg] = rob_entry.val
-            reg = self.rob.entries[self.rob.commit].reg
-            if self.rat[reg] == self.rob.commit:
-                self.rat[reg] = None
+            if self.rat[rob_entry.reg] == self.rob.commit:
+                self.rat[rob_entry.reg] = None
             self.rob.entries[self.rob.commit] = ROB.ROB_entry()
             self.rob.commit += 1
+            self.executed += 1
 
 
     def execute(self):
@@ -193,6 +194,8 @@ class Processor:
             self.wbq.append( [rs_entry.dest_tag, rs_entry.val1 + rs_entry.val2, 1, rs_entry.op] )
         if rs_entry.op == 'sub':
             self.wbq.append( [rs_entry.dest_tag, rs_entry.val1 - rs_entry.val2, 1, rs_entry.op] )
+        if rs_entry.op == 'mul':
+            self.wbq.append( [rs_entry.dest_tag, rs_entry.val1 * rs_entry.val2, 2, rs_entry.op] )
 
 
     def execute_old(self, opcode, operands, current_pc):
@@ -249,12 +252,12 @@ class Processor:
     
     def execute_available(self, op):
         in_use = 0
-        if op in opcodes.arithmetic_ops:
-            in_use = sum(1 for wb in self.wbq if wb[3] in opcodes.arithmetic_ops)
-        if in_use < 2:
-            return True
-        else:
-            return False
+        if op in opcodes.arithmetic:
+            in_use = sum(1 for wb in self.wbq if wb[3] in opcodes.arithmetic)
+            return in_use < 2
+        if op in opcodes.advanced:
+            in_use = sum(1 for wb in self.wbq if wb[3] in opcodes.advanced)
+            return in_use < 1
 
     def decrement_wbq_cycles(self):
         if len(self.wbq) > 0:

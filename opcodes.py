@@ -1,2 +1,4 @@
-arithmetic_ops = ['add',
-                  'sub']
+arithmetic = ['add',
+              'sub']
+
+advanced   = ['mul']
