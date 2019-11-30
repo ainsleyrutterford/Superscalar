@@ -190,9 +190,9 @@ class Processor:
         rs_entry = self.eq.pop(0)
         if rs_entry.op == 'add':
             # Third entry is how many cycles it will take to execute
-            self.wbq.append( [rs_entry.dest_tag, rs_entry.val1 + rs_entry.val2, 2, rs_entry.op] )
+            self.wbq.append( [rs_entry.dest_tag, rs_entry.val1 + rs_entry.val2, 1, rs_entry.op] )
         if rs_entry.op == 'sub':
-            self.wbq.append( [rs_entry.dest_tag, rs_entry.val1 - rs_entry.val2, 2, rs_entry.op] )
+            self.wbq.append( [rs_entry.dest_tag, rs_entry.val1 - rs_entry.val2, 1, rs_entry.op] )
 
 
     def execute_old(self, opcode, operands, current_pc):
