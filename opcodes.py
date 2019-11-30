@@ -1,4 +1,5 @@
-arithmetic = ['add',
-              'sub']
+arithmetic = ['add', 'sub']
 
-advanced   = ['mul']
+advanced = ['mul']
+
+memory = ['lw', 'sw']

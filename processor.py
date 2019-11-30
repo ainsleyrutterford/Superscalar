@@ -7,12 +7,56 @@ class ROB:
             self.reg  = None
             self.val  = None
             self.done = None
+            self.load = False
     
     def __init__(self):
         self.entries = [ROB.ROB_entry() for i in range(2048)]
         self.commit  = 0
         self.issue   = 0
 
+class LSQ:
+
+    class LSQ_entry:
+        def __init__(self):
+            self.op        = None
+            self.dest_tag  = None
+            self.addr      = None
+            self.val       = None
+            self.done      = None
+    
+    def __init__(self):
+        self.entries = [LSQ.LSQ_entry() for i in range(2048)]
+        self.commit  = 0
+        self.issue   = 0
+        self.array_labels = {}
+    
+    def find_dest_and_addr(self, op_tuple):
+        opcode = op_tuple[0]
+        operands = op_tuple[1]
+        if opcode == 'lw':
+            array_op = operands[1]
+            label = array_op[:array_op.find('(')]
+            index = array_op[array_op.find('(')+1:array_op.find(')')]
+            if (index.startswith('$')):
+                index = self.rf[int(index[1:])]
+            else:
+                index = int(index)
+            address = self.array_labels[label] + index
+            return (operands[0], address)
+        else:
+            return 32
+
+
+    def fill_next(self, op, dest_tag, addr):
+        self.entries[self.issue].op        = op
+        self.entries[self.issue].dest_tag  = dest_tag
+        self.entries[self.issue].addr      = addr
+        self.entries[self.issue].done      = False
+    
+    def find_next_ready(self):
+        for i, entry in enumerate(self.entries):
+            if entry.op != None:
+                return i
 
 class RS:
 
@@ -62,10 +106,11 @@ class Processor:
 
         self.iq = []
         self.opq = []
-        # self.rf = [0] * 32
-        self.rf = [12, 4, 7, 2, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        # self.rf = [0] * 33 # (32 and an extra as a dummy for sw ROB entries)
+        self.rf = [12, 7, 4, 2, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         self.mem = []
         self.rob = ROB()
+        self.lsq = LSQ()
         self.rat = [None] * 128
         self.rs = RS()
         self.eq = []
@@ -73,7 +118,6 @@ class Processor:
 
         self.cycles = 0
         self.executed = 0
-        self.array_labels = {}
 
     def cycle(self, assembly):
         if len(self.eq) > 0:
@@ -94,9 +138,12 @@ class Processor:
         print(f'op queue: {self.opq}')
         print(f'register file: {self.rf}')
         print(f'rob: { [f"{e.reg}, {e.val}, {e.done}" for e in self.rob.entries[:6]] }')
+        print(f'lsq: { [f"{e.op}, {e.addr}, {e.val}, {e.done}" for e in self.lsq.entries[:6]] }')
         print(f'rat: {self.rat[:6]}')
         print(f'res station: { [f"{rs.op}, {rs.dest_tag}, {rs.tag1}, {rs.tag2}, {rs.val1}, {rs.val2}" for rs in filter(None, self.rs.entries[:6])] }')
+        print(f'exec queue: {self.eq}')
         print(f'writeback queue: {self.wbq}')
+        print(f'memory: {self.mem}')
 
     def fetch(self, assembly):
         instruction = assembly.splitlines()[self.pc]
@@ -107,33 +154,37 @@ class Processor:
         if (instruction[0] == '.'):
             label = instruction[1:instruction.find(':')]
             values = [int(x) for x in instruction.split(' ')[1:]]
-            self.array_labels[label] = len(self.mem)
+            self.lsq.array_labels[label] = len(self.mem)
             self.mem += values
-            opcode = 'nop'
-            operands = []
+            opcode = 'add'
+            operands = ['$32','$32','$32']
         else:
-            if instruction == 'nop':
-                opcode = 'nop'
-                operands = []
-            else:
-                opcode = instruction[:instruction.find(' ')]
-                operands = instruction.split(' ')[1:]
+            opcode = instruction[:instruction.find(' ')]
+            operands = instruction.split(' ')[1:]
         return (opcode, operands)
     
     def issue(self, op_tuple):
-        op, dest, tag1, tag2, val1, val2 = self.rs.split(op_tuple)
-        # 1. Place next instruction from iq into the next available space in the rs.
-        if self.rat[int(tag1[1:])] == None:
-            val1 = self.rf[int(tag1[1:])]
-            tag1 = None
+        if op_tuple[0] in opcodes.arithmetic or op_tuple[0] in opcodes.advanced:
+            op, dest, tag1, tag2, val1, val2 = self.rs.split(op_tuple)
+            # 1. Place next instruction from iq into the next available space in the rs.
+            if self.rat[int(tag1[1:])] == None:
+                val1 = self.rf[int(tag1[1:])]
+                tag1 = None
+            else:
+                tag1 = self.rat[int(tag1[1:])]
+            if self.rat[int(tag2[1:])] == None:
+                val2 = self.rf[int(tag2[1:])]
+                tag2 = None
+            else:
+                tag2 = self.rat[int(tag2[1:])]
+            self.rs.fill_next(op, self.rob.issue, tag1, tag2, val1, val2)
+        elif op_tuple[0] in opcodes.memory:
+            dest, addr = self.lsq.find_dest_and_addr(op_tuple)
+            self.lsq.fill_next(op_tuple[0], self.rob.issue, addr)
+            self.lsq.issue += 1
+            self.rob.entries[self.rob.issue].load = True
         else:
-            tag1 = self.rat[int(tag1[1:])]
-        if self.rat[int(tag2[1:])] == None:
-            val2 = self.rf[int(tag2[1:])]
-            tag2 = None
-        else:
-            tag2 = self.rat[int(tag2[1:])]
-        self.rs.fill_next(op, self.rob.issue, tag1, tag2, val1, val2)
+            dest = '$32'
         # 2. Set the rob_entry.reg at the issue pointer to be the dest register of the instruction.
         #    Set the rob_entry.done to False.
         self.rob.entries[self.rob.issue].reg  = int(dest[1:])
@@ -154,6 +205,15 @@ class Processor:
                 self.eq.append( self.rs.entries[ready_index] )
                 # 3. Free the rs of the instruction.
                 self.rs.entries[ready_index] = None
+        lsq_ready = self.lsq.find_next_ready()
+        if lsq_ready != None:
+            op = self.lsq.entries[lsq_ready].op
+            if self.execute_available(op):
+                # 2. Send the instruction to execute.
+                #    The instruction carries a name (or tag) of the rob_entry used.
+                self.eq.append( self.lsq.entries[lsq_ready] )
+                # 3. Free the rs of the instruction.
+                self.lsq.entries[lsq_ready] = LSQ.LSQ_entry()
     
     def write_back(self):
         self.decrement_wbq_cycles()
@@ -178,24 +238,37 @@ class Processor:
         #           else:
         #               leave rat entry as is
         rob_entry = self.rob.entries[self.rob.commit]
+        load = rob_entry.load
         if rob_entry.done == True:
             self.rf[rob_entry.reg] = rob_entry.val
             if self.rat[rob_entry.reg] == self.rob.commit:
                 self.rat[rob_entry.reg] = None
             self.rob.entries[self.rob.commit] = ROB.ROB_entry()
             self.rob.commit += 1
+            if load:
+                self.lsq.entries[self.lsq.commit] = LSQ.LSQ_entry()
+                self.lsq.commit += 1
             self.executed += 1
 
 
     def execute(self):
-        rs_entry = self.eq.pop(0)
-        if rs_entry.op == 'add':
-            # Third entry is how many cycles it will take to execute
-            self.wbq.append( [rs_entry.dest_tag, rs_entry.val1 + rs_entry.val2, 1, rs_entry.op] )
-        if rs_entry.op == 'sub':
-            self.wbq.append( [rs_entry.dest_tag, rs_entry.val1 - rs_entry.val2, 1, rs_entry.op] )
-        if rs_entry.op == 'mul':
-            self.wbq.append( [rs_entry.dest_tag, rs_entry.val1 * rs_entry.val2, 2, rs_entry.op] )
+        # Could be a reservation station entry or a load store queue entry
+        entry = self.eq.pop(0)
+
+        if isinstance(entry, RS.RS_entry):
+            if entry.op == 'add':
+                # Third entry is how many cycles it will take to execute
+                self.wbq.append( [entry.dest_tag, entry.val1 + entry.val2, 1, entry.op] )
+            if entry.op == 'sub':
+                self.wbq.append( [entry.dest_tag, entry.val1 - entry.val2, 1, entry.op] )
+            if entry.op == 'mul':
+                self.wbq.append( [entry.dest_tag, entry.val1 * entry.val2, 2, entry.op] )
+
+        elif isinstance(entry, LSQ.LSQ_entry):
+            if entry.op == 'lw':
+                self.wbq.append( [entry.dest_tag, self.mem[entry.addr], 2, 'lw'] )
+            if entry.op == 'sw':
+                return
 
 
     def execute_old(self, opcode, operands, current_pc):
@@ -257,6 +330,9 @@ class Processor:
             return in_use < 2
         if op in opcodes.advanced:
             in_use = sum(1 for wb in self.wbq if wb[3] in opcodes.advanced)
+            return in_use < 1
+        if op in opcodes.memory:
+            in_use = sum(1 for wb in self.wbq if wb[3] in opcodes.memory)
             return in_use < 1
 
     def decrement_wbq_cycles(self):
