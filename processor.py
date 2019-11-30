@@ -159,7 +159,7 @@ class Processor:
         self.decrement_wbq_cycles()
         if len(self.wbq) > 0:
             # Only write back if it has been enough cycles
-            if self.wbq[0][2] == 0:
+            if self.wbq[0][2] <= 0:
                 # 1. Broadcast the name (or tag) and the value of the completed instruction
                 #    back to the rs so that the rs can 'capture' the values.
                 tag, val, cycles, op = self.wbq.pop(0)
