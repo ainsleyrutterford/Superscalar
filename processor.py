@@ -104,10 +104,15 @@ class RS:
             self.entries[next_none] = RS.RS_entry(op, dest_tag, tag1, tag2, val1, val2)
     
     def find_next_ready(self):
+        ready = None
+        index = float('inf')
         for i, entry in enumerate(self.entries):
             if entry != None:
                 if entry.val1 != None and entry.val2 != None and entry.dispatched == False:
-                    return i
+                    if entry.dest_tag < index: # Always return oldest entry
+                        ready = i
+                        index = entry.dest_tag
+        return ready
 
     def capture(self, tag, val):
         for entry in self.entries:
@@ -135,21 +140,29 @@ class Processor:
         self.eq = []
         self.wbq = []
 
+        self.super = 4
         self.cycles = 0
         self.executed = 0
 
     def cycle(self, assembly):
-        if len(self.eq) > 0:
-            self.execute()
-        self.dispatch()
-        if len(self.opq) > 0:
-            self.issue(self.opq.pop(0))
-        if len(self.iq) > 0:
-            self.opq.append(self.decode(self.iq.pop(0)))
-        if self.pc < len(assembly.splitlines()):
-            self.iq.append(self.fetch(assembly))
-        self.write_back()
-        self.commit()
+        for i in range(self.super):
+            if len(self.eq) > 0:
+                self.execute()
+        for i in range(self.super):
+            self.dispatch()
+        for i in range(self.super):
+            if len(self.opq) > 0:
+                self.issue(self.opq.pop(0))
+        for i in range(self.super):
+            if len(self.iq) > 0:
+                self.opq.append(self.decode(self.iq.pop(0)))
+        for i in range(self.super):
+            if self.pc < len(assembly.splitlines()):
+                self.iq.append(self.fetch(assembly))
+        for i in range(self.super):
+            self.write_back()
+        for i in range(self.super):
+            self.commit()
         self.cycles += 1
         print(f'cycle: {self.cycles}')
         print(f'executed: {self.executed}')
@@ -160,7 +173,7 @@ class Processor:
         print(f'lsq: { [f"{e.op}, {e.dest_tag}, {e.addr}, {e.val}, {e.done}" for e in self.lsq.entries[:7]] }')
         print(f'rat: {self.rat[:6]}')
         print(f'res station: { [f"{rs.op}, {rs.dest_tag}, {rs.tag1}, {rs.tag2}, {rs.val1}, {rs.val2}" for rs in filter(None, self.rs.entries[:6])] }')
-        print(f'exec queue: {self.eq}')
+        # print(f'exec queue: { [f"{rs.op}, {rs.dest_tag}, {rs.tag1}, {rs.tag2}, {rs.val1}, {rs.val2}" for rs in filter(None, self.eq[:6])] }')
         print(f'writeback queue: {self.wbq}')
         print(f'memory: {self.mem}')
 
@@ -260,7 +273,6 @@ class Processor:
         #           else:
         #               leave rat entry as is
         rob_entry = self.rob.entries[self.rob.commit]
-        print(f'ROB COMMIT: {self.rob.commit}')
         load = rob_entry.load
         if rob_entry.done == True:
             # self.rob.entries[self.rob.commit].fair_game += 1
@@ -269,7 +281,6 @@ class Processor:
             if self.rat[rob_entry.reg] == self.rob.commit:
                 self.rat[rob_entry.reg] = None
             self.rob.entries[self.rob.commit] = ROB.ROB_entry()
-            print(self.rob.entries[self.rob.commit])
             self.rob.commit += 1
             if load:
                 lsq_entry = self.lsq.entries[self.lsq.commit]
@@ -294,7 +305,6 @@ class Processor:
                 self.wbq.append( [entry.dest_tag, entry.val1 * entry.val2, 2, entry.op] )
 
         elif isinstance(entry, LSQ.LSQ_entry):
-            print('EXECUTING MEM')
             if entry.op == 'lw':
                 # Maybe do forwarding here?
                 # forwarding = self.lsq.can_forward(entry.addr)
@@ -303,8 +313,6 @@ class Processor:
                 # else:
                 self.wbq.append( [entry.dest_tag, self.mem[entry.addr], 2, 'lw'] )
             if entry.op == 'sw':
-                print('EXECUTING SW')
-                print(self.lsq.commit)
                 self.lsq.entries[self.lsq.commit].val = self.rf[entry.reg]
                 # self.mem[entry.addr] = 
                 # self.mem[entry.addr] = self.rf[]
