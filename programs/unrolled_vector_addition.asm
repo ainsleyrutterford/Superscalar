@@ -10,6 +10,7 @@
 .A: 0 1 2 3 4 5 6 7 8 9     ; int A[10] = {...}
 .B: 0 1 2 3 4 5 6 7 8 9     ; int B[10] = {...}
 .C: 0 0 0 0 0 0 0 0 0 0     ; int C[10] = {...}
+.D: 1
 
 start:
     lw $0 A(0)             ; $0 = A[0]
@@ -62,4 +63,4 @@ start:
     add $3 $0 $1           ; $3 = A[9] + B[9]
     sw C(9) $3             ; c[9] = $3
 
-    li $31 1               ; set register 31 to 1 (halt)
+    lw $31 D(0)              ; set register 31 to 1 (halt)

@@ -247,7 +247,7 @@ class Processor:
                 #    Set rob_entry.done to True
                 self.rob.entries[tag].val = val
                 self.rob.entries[tag].done = True
-                self.rob.entries[tag].fair_game = 0
+                # self.rob.entries[tag].fair_game = 0
                 if op == 'lw':
                     self.lsq.entries[tag].val = val
     
@@ -263,21 +263,21 @@ class Processor:
         print(f'ROB COMMIT: {self.rob.commit}')
         load = rob_entry.load
         if rob_entry.done == True:
-            self.rob.entries[self.rob.commit].fair_game += 1
-            if self.rob.entries[self.rob.commit].fair_game > 1:
-                self.rf[rob_entry.reg] = rob_entry.val
-                if self.rat[rob_entry.reg] == self.rob.commit:
-                    self.rat[rob_entry.reg] = None
-                self.rob.entries[self.rob.commit] = ROB.ROB_entry()
-                print(self.rob.entries[self.rob.commit])
-                self.rob.commit += 1
-                if load:
-                    lsq_entry = self.lsq.entries[self.lsq.commit]
-                    if lsq_entry.op == 'sw':
-                        self.mem[lsq_entry.addr] = lsq_entry.val
-                    self.lsq.entries[self.lsq.commit] = LSQ.LSQ_entry()
-                    self.lsq.commit += 1
-                self.executed += 1
+            # self.rob.entries[self.rob.commit].fair_game += 1
+            # if self.rob.entries[self.rob.commit].fair_game > 1:
+            self.rf[rob_entry.reg] = rob_entry.val
+            if self.rat[rob_entry.reg] == self.rob.commit:
+                self.rat[rob_entry.reg] = None
+            self.rob.entries[self.rob.commit] = ROB.ROB_entry()
+            print(self.rob.entries[self.rob.commit])
+            self.rob.commit += 1
+            if load:
+                lsq_entry = self.lsq.entries[self.lsq.commit]
+                if lsq_entry.op == 'sw':
+                    self.mem[lsq_entry.addr] = lsq_entry.val
+                self.lsq.entries[self.lsq.commit] = LSQ.LSQ_entry()
+                self.lsq.commit += 1
+            self.executed += 1
 
 
     def execute(self):
@@ -309,7 +309,7 @@ class Processor:
                 # self.mem[entry.addr] = 
                 # self.mem[entry.addr] = self.rf[]
                 # print(self.lsq.entries[self.lsq.commit].val)
-                self.wbq.append( [entry.dest_tag, 0, 2, 'sw'] )
+                self.wbq.append( [entry.dest_tag, 0, 1, 'sw'] )
 
 
 
