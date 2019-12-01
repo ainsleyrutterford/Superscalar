@@ -1,4 +1,5 @@
 import opcodes
+import predictor
 
 class ROB:
 
@@ -140,6 +141,7 @@ class Processor:
         self.eq = []
         self.wbq = []
 
+        self.predictor = predictor.Predictor('not_taken')
         self.super = 4
         self.cycles = 0
         self.executed = 0
@@ -179,7 +181,7 @@ class Processor:
 
     def fetch(self, assembly):
         instruction = assembly.splitlines()[self.pc]
-        self.pc += 1
+        self.pc = self.predictor.predict(self.pc)
         return instruction
 
     def decode(self, instruction):
