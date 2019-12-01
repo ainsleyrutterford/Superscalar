@@ -22,6 +22,7 @@ class LSQ:
             self.dest_tag  = None
             self.addr      = None
             self.val       = None
+            self.reg       = None
             self.done      = None
     
     def __init__(self):
@@ -44,19 +45,37 @@ class LSQ:
             address = self.array_labels[label] + index
             return (operands[0], address)
         else:
-            return 32
+            return ('$32', -1)
 
 
-    def fill_next(self, op, dest_tag, addr):
+    def fill_next(self, op, operands, dest_tag, addr):
         self.entries[self.issue].op        = op
         self.entries[self.issue].dest_tag  = dest_tag
         self.entries[self.issue].addr      = addr
         self.entries[self.issue].done      = False
+        if op == 'sw':
+            array_op = operands[0]
+            label = array_op[:array_op.find('(')]
+            index = array_op[array_op.find('(')+1:array_op.find(')')]
+            if (index.startswith('$')):
+                index = self.rf[int(index[1:])]
+            else:
+                index = int(index)
+            address = self.array_labels[label] + index
+            self.entries[self.issue].addr = address
+            self.entries[self.issue].reg = int(operands[1][1:])
     
     def find_next_ready(self):
         for i, entry in enumerate(self.entries):
             if entry.op != None:
                 return i
+
+    def can_forward(self, address):
+        latest = None
+        for i, entry in enumerate(self.entries):
+            if entry.addr == address and entry.op == 'sw':
+                latest = i
+        return latest
 
 class RS:
 
@@ -138,7 +157,7 @@ class Processor:
         print(f'op queue: {self.opq}')
         print(f'register file: {self.rf}')
         print(f'rob: { [f"{e.reg}, {e.val}, {e.done}" for e in self.rob.entries[:6]] }')
-        print(f'lsq: { [f"{e.op}, {e.addr}, {e.val}, {e.done}" for e in self.lsq.entries[:6]] }')
+        print(f'lsq: { [f"{e.op}, {e.dest_tag}, {e.addr}, {e.val}, {e.done}" for e in self.lsq.entries[:7]] }')
         print(f'rat: {self.rat[:6]}')
         print(f'res station: { [f"{rs.op}, {rs.dest_tag}, {rs.tag1}, {rs.tag2}, {rs.val1}, {rs.val2}" for rs in filter(None, self.rs.entries[:6])] }')
         print(f'exec queue: {self.eq}')
@@ -180,10 +199,10 @@ class Processor:
             self.rs.fill_next(op, self.rob.issue, tag1, tag2, val1, val2)
         elif op_tuple[0] in opcodes.memory:
             dest, addr = self.lsq.find_dest_and_addr(op_tuple)
-            self.lsq.fill_next(op_tuple[0], self.rob.issue, addr)
+            self.lsq.fill_next(op_tuple[0], op_tuple[1], self.rob.issue, addr)
             self.lsq.issue += 1
             self.rob.entries[self.rob.issue].load = True
-        else:
+        else: # Think you can comment this out
             dest = '$32'
         # 2. Set the rob_entry.reg at the issue pointer to be the dest register of the instruction.
         #    Set the rob_entry.done to False.
@@ -213,7 +232,7 @@ class Processor:
                 #    The instruction carries a name (or tag) of the rob_entry used.
                 self.eq.append( self.lsq.entries[lsq_ready] )
                 # 3. Free the rs of the instruction.
-                self.lsq.entries[lsq_ready] = LSQ.LSQ_entry()
+                # self.lsq.entries[lsq_ready] = LSQ.LSQ_entry()
     
     def write_back(self):
         self.decrement_wbq_cycles()
@@ -228,6 +247,9 @@ class Processor:
                 #    Set rob_entry.done to True
                 self.rob.entries[tag].val = val
                 self.rob.entries[tag].done = True
+                self.rob.entries[tag].fair_game = 0
+                if op == 'lw':
+                    self.lsq.entries[tag].val = val
     
     def commit(self):
         # 1. Test if next instruction at commit pointer of rob is done.
@@ -238,17 +260,24 @@ class Processor:
         #           else:
         #               leave rat entry as is
         rob_entry = self.rob.entries[self.rob.commit]
+        print(f'ROB COMMIT: {self.rob.commit}')
         load = rob_entry.load
         if rob_entry.done == True:
-            self.rf[rob_entry.reg] = rob_entry.val
-            if self.rat[rob_entry.reg] == self.rob.commit:
-                self.rat[rob_entry.reg] = None
-            self.rob.entries[self.rob.commit] = ROB.ROB_entry()
-            self.rob.commit += 1
-            if load:
-                self.lsq.entries[self.lsq.commit] = LSQ.LSQ_entry()
-                self.lsq.commit += 1
-            self.executed += 1
+            self.rob.entries[self.rob.commit].fair_game += 1
+            if self.rob.entries[self.rob.commit].fair_game > 1:
+                self.rf[rob_entry.reg] = rob_entry.val
+                if self.rat[rob_entry.reg] == self.rob.commit:
+                    self.rat[rob_entry.reg] = None
+                self.rob.entries[self.rob.commit] = ROB.ROB_entry()
+                print(self.rob.entries[self.rob.commit])
+                self.rob.commit += 1
+                if load:
+                    lsq_entry = self.lsq.entries[self.lsq.commit]
+                    if lsq_entry.op == 'sw':
+                        self.mem[lsq_entry.addr] = lsq_entry.val
+                    self.lsq.entries[self.lsq.commit] = LSQ.LSQ_entry()
+                    self.lsq.commit += 1
+                self.executed += 1
 
 
     def execute(self):
@@ -265,10 +294,23 @@ class Processor:
                 self.wbq.append( [entry.dest_tag, entry.val1 * entry.val2, 2, entry.op] )
 
         elif isinstance(entry, LSQ.LSQ_entry):
+            print('EXECUTING MEM')
             if entry.op == 'lw':
+                # Maybe do forwarding here?
+                # forwarding = self.lsq.can_forward(entry.addr)
+                # if forwarding != None:
+                #     self.wbq.append( [entry.dest_tag, self.lsq.entries[forwarding].val, 1, 'lw'] )
+                # else:
                 self.wbq.append( [entry.dest_tag, self.mem[entry.addr], 2, 'lw'] )
             if entry.op == 'sw':
-                return
+                print('EXECUTING SW')
+                print(self.lsq.commit)
+                self.lsq.entries[self.lsq.commit].val = self.rf[entry.reg]
+                # self.mem[entry.addr] = 
+                # self.mem[entry.addr] = self.rf[]
+                # print(self.lsq.entries[self.lsq.commit].val)
+                self.wbq.append( [entry.dest_tag, 0, 2, 'sw'] )
+
 
 
     def execute_old(self, opcode, operands, current_pc):
