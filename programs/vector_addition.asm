@@ -11,8 +11,8 @@
 .C: 0 0 0 0 0 0 0 0 0 0     ; int C[10] = {...}
 
 
-    li $0 10                ; int n = 10
-    li $1 1                 ; int i = 1
+    addi $0 $0 10           ; int n = 10
+    addi $1 $1 1            ; int i = 1
 
 for:
     lw $3 A($1)             ; $3 = A[i]
@@ -23,4 +23,4 @@ for:
     blt $1 $0 'for'         ; if (i < n) for loop again
 
 for_done:
-    li $31 1                ; set register 31 to 1 (halt)
+    addi $31 $31 1          ; set register 31 to 1 (halt)
