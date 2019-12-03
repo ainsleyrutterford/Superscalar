@@ -9,8 +9,8 @@
 ; }
 ; return a;
 
-    li $0 27                ; int a = 27
-    li $1 39                ; int b = 39
+    addi $0 $0 27           ; int a = 27
+    addi $1 $1 39           ; int b = 39
 
 while:
     beq $0 $1 'while_done'  ; while (a != b)
@@ -22,5 +22,5 @@ less_than:                  ; else
     j 'while'
 
 while_done:
-    move $10 $0             ; %10 contains a = gcd
-    li $31 1                ; set register 31 to 1 (halt)
+    addi $10 $0 0           ; %10 contains a = gcd
+    addi $31 $31 1          ; set register 31 to 1 (halt)
