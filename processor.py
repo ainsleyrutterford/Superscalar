@@ -144,8 +144,8 @@ class Processor:
 
         self.iq = []
         self.opq = []
-        # self.rf = [0] * 33 # (32 and an extra as a dummy for sw ROB entries)
-        self.rf = [12, 7, 4, 2, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        self.rf = [0] * 33 # (32 and an extra as a dummy for sw ROB entries)
+        # self.rf = [12, 7, 4, 2, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         self.mem = []
         self.rob = ROB()
         self.lsq = LSQ()
@@ -195,7 +195,7 @@ class Processor:
     def fetch(self, assembly):
         instruction = assembly.splitlines()[self.pc]
         original_pc = self.pc
-        next_pc = self.predictor.predict(self.pc)
+        next_pc = self.predictor.predict(self.pc, instruction)
         self.pc = next_pc
         return instruction, original_pc, next_pc
 
@@ -340,9 +340,8 @@ class Processor:
             if entry.op == 'mul':
                 self.wbq.append( [entry.dest_tag, entry.val1 * entry.val2, 2, entry.op] )
             
-            if entry.op == 'blt':
-                print('BRANCH')
-                self.wbq.append( [entry.dest_tag, 0, 1, 'blt'] )
+            if entry.op in opcodes.branch:
+                self.wbq.append( [entry.dest_tag, 0, 1, entry.op] )
 
         elif isinstance(entry, LSQ.LSQ_entry):
             if entry.op == 'lw':

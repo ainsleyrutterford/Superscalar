@@ -4,4 +4,4 @@ advanced = ['mul']
 
 memory = ['lw', 'sw']
 
-branch = ['blt']
+branch = ['beq', 'bne', 'ble', 'blt', 'j']
