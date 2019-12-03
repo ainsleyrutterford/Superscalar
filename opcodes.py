@@ -1,5 +1,7 @@
 arithmetic = ['add', 'sub']
 
+immediate = ['addi', 'subi']
+
 advanced = ['mul']
 
 memory = ['lw', 'sw']

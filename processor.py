@@ -104,8 +104,10 @@ class RS:
     def split(self, op_tuple):
         opcode = op_tuple[0]
         operands = op_tuple[1]
-        if opcode in opcodes.arithmetic or opcode in opcodes.advanced:
+        if opcode in (opcodes.arithmetic + opcodes.advanced):
             return (opcode, operands[0], operands[1], operands[2], None, None)
+        if opcode in (opcodes.immediate):
+            return (opcode, operands[0], operands[1], None, None, int(operands[2]))
 
     def fill_next(self, op, dest_tag, tag1, tag2, val1, val2):
         if None in self.entries:
@@ -216,7 +218,7 @@ class Processor:
         return (opcode, operands, original_pc, next_pc)
     
     def issue(self, op_tuple):
-        if op_tuple[0] in opcodes.arithmetic or op_tuple[0] in opcodes.advanced:
+        if op_tuple[0] in (opcodes.arithmetic + opcodes.advanced + opcodes.immediate):
             op, dest, tag1, tag2, val1, val2 = self.rs.split(op_tuple)
             # 1. Place next instruction from iq into the next available space in the rs.
             if self.rat[int(tag1[1:])] == None:
@@ -224,11 +226,14 @@ class Processor:
                 tag1 = None
             else:
                 tag1 = self.rat[int(tag1[1:])]
-            if self.rat[int(tag2[1:])] == None:
-                val2 = self.rf[int(tag2[1:])]
-                tag2 = None
-            else:
-                tag2 = self.rat[int(tag2[1:])]
+            if op not in opcodes.immediate:
+                if self.rat[int(tag2[1:])] == None:
+                    val2 = self.rf[int(tag2[1:])]
+                    tag2 = None
+                else:
+                    tag2 = self.rat[int(tag2[1:])]
+            if op in opcodes.immediate:
+                op = op[:-1]
             self.rs.fill_next(op, self.rob.issue, tag1, tag2, val1, val2)
         elif op_tuple[0] in opcodes.memory:
             dest, addr = self.lsq.find_dest_and_addr(op_tuple)
