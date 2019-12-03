@@ -5,15 +5,23 @@ class ROB:
 
     class ROB_entry:
         def __init__(self):
-            self.reg  = None
-            self.val  = None
-            self.done = None
-            self.load = False
+            self.reg    = None
+            self.val    = None
+            self.done   = None
+            self.load   = False
+            self.branch = False
     
     def __init__(self):
         self.entries = [ROB.ROB_entry() for i in range(2048)]
         self.commit  = 0
         self.issue   = 0
+    
+    def fill_branch_info(self, op_tuple):
+        self.entries[self.issue].op = op_tuple[0]
+        self.entries[self.issue].operands = op_tuple[1]
+        self.entries[self.issue].current_pc = op_tuple[2]
+        self.entries[self.issue].next_pc = op_tuple[3]
+        self.entries[self.issue].branch = True
 
 class LSQ:
 
@@ -104,6 +112,11 @@ class RS:
             next_none = self.entries.index(None)
             self.entries[next_none] = RS.RS_entry(op, dest_tag, tag1, tag2, val1, val2)
     
+    def fill_next_branch(self, op_tuple, dest_tag):
+        if None in self.entries:
+            next_none = self.entries.index(None)
+            self.entries[next_none] = RS.RS_entry(op_tuple[0], dest_tag, None, None, 0, 0)
+
     def find_next_ready(self):
         ready = None
         index = float('inf')
@@ -181,10 +194,15 @@ class Processor:
 
     def fetch(self, assembly):
         instruction = assembly.splitlines()[self.pc]
-        self.pc = self.predictor.predict(self.pc)
-        return instruction
+        original_pc = self.pc
+        next_pc = self.predictor.predict(self.pc)
+        self.pc = next_pc
+        return instruction, original_pc, next_pc
 
-    def decode(self, instruction):
+    def decode(self, tuple):
+        instruction = tuple[0]
+        original_pc = tuple[1]
+        next_pc     = tuple[2]
         if (instruction[0] == '.'):
             label = instruction[1:instruction.find(':')]
             values = [int(x) for x in instruction.split(' ')[1:]]
@@ -195,7 +213,7 @@ class Processor:
         else:
             opcode = instruction[:instruction.find(' ')]
             operands = instruction.split(' ')[1:]
-        return (opcode, operands)
+        return (opcode, operands, original_pc, next_pc)
     
     def issue(self, op_tuple):
         if op_tuple[0] in opcodes.arithmetic or op_tuple[0] in opcodes.advanced:
@@ -217,7 +235,9 @@ class Processor:
             self.lsq.fill_next(op_tuple[0], op_tuple[1], self.rob.issue, addr)
             self.lsq.issue += 1
             self.rob.entries[self.rob.issue].load = True
-        else: # Think you can comment this out
+        elif op_tuple[0] in opcodes.branch:
+            self.rs.fill_next_branch(op_tuple, self.rob.issue)
+            self.rob.fill_branch_info(op_tuple)
             dest = '$32'
         # 2. Set the rob_entry.reg at the issue pointer to be the dest register of the instruction.
         #    Set the rob_entry.done to False.
@@ -276,6 +296,7 @@ class Processor:
         #               leave rat entry as is
         rob_entry = self.rob.entries[self.rob.commit]
         load = rob_entry.load
+        branch = rob_entry.branch
         if rob_entry.done == True:
             # self.rob.entries[self.rob.commit].fair_game += 1
             # if self.rob.entries[self.rob.commit].fair_game > 1:
@@ -290,6 +311,19 @@ class Processor:
                     self.mem[lsq_entry.addr] = lsq_entry.val
                 self.lsq.entries[self.lsq.commit] = LSQ.LSQ_entry()
                 self.lsq.commit += 1
+            if branch:
+                correct, pc = self.predictor.check(self.rf, rob_entry.op, 
+                rob_entry.operands, rob_entry.current_pc, rob_entry.next_pc)
+                if not correct:
+                    self.iq = []
+                    self.opq = []
+                    self.rob = ROB()
+                    self.lsq = LSQ()
+                    self.rat = [None] * 128
+                    self.rs = RS()
+                    self.eq = []
+                    self.wbq = []
+                    self.pc = pc
             self.executed += 1
 
 
@@ -305,6 +339,10 @@ class Processor:
                 self.wbq.append( [entry.dest_tag, entry.val1 - entry.val2, 1, entry.op] )
             if entry.op == 'mul':
                 self.wbq.append( [entry.dest_tag, entry.val1 * entry.val2, 2, entry.op] )
+            
+            if entry.op == 'blt':
+                print('BRANCH')
+                self.wbq.append( [entry.dest_tag, 0, 1, 'blt'] )
 
         elif isinstance(entry, LSQ.LSQ_entry):
             if entry.op == 'lw':
@@ -316,9 +354,6 @@ class Processor:
                 self.wbq.append( [entry.dest_tag, self.mem[entry.addr], 2, 'lw'] )
             if entry.op == 'sw':
                 self.lsq.entries[self.lsq.commit].val = self.rf[entry.reg]
-                # self.mem[entry.addr] = 
-                # self.mem[entry.addr] = self.rf[]
-                # print(self.lsq.entries[self.lsq.commit].val)
                 self.wbq.append( [entry.dest_tag, 0, 1, 'sw'] )
 
 
@@ -385,6 +420,9 @@ class Processor:
             return in_use < 1
         if op in opcodes.memory:
             in_use = sum(1 for wb in self.wbq if wb[3] in opcodes.memory)
+            return in_use < 1
+        if op in opcodes.branch:
+            in_use = sum(1 for wb in self.wbq if wb[3] in opcodes.branch)
             return in_use < 1
 
     def decrement_wbq_cycles(self):
