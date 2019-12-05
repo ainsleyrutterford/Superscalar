@@ -361,59 +361,6 @@ class Processor:
                 self.wbq.append( [entry.dest_tag, 0, 1, 'sw'] )
 
 
-
-    def execute_old(self, opcode, operands, current_pc):
-        if   (opcode == 'addi'):
-            self.rf[int(operands[0][1:])] = self.rf[int(operands[1][1:])] + int(operands[2])
-        elif (opcode == 'add'):
-            self.rf[int(operands[0][1:])] = self.rf[int(operands[1][1:])] + self.rf[int(operands[2][1:])]
-        elif (opcode == 'sub'):
-            self.rf[int(operands[0][1:])] = self.rf[int(operands[1][1:])] - self.rf[int(operands[2][1:])]
-        elif (opcode == 'beq'):
-            if (self.rf[int(operands[0][1:])] == self.rf[int(operands[1][1:])]):
-                self.pc = int(operands[2])
-        elif (opcode == 'bne'):
-            if (self.rf[int(operands[0][1:])] != self.rf[int(operands[1][1:])]):
-                self.pc = int(operands[2])
-        elif (opcode == 'ble'):
-            if (self.rf[int(operands[0][1:])] <= self.rf[int(operands[1][1:])]):
-                self.pc = int(operands[2])
-        elif (opcode == 'blt'):
-            if (self.rf[int(operands[0][1:])] <  self.rf[int(operands[1][1:])]):
-                self.pc = int(operands[2])
-        elif (opcode == 'j'):
-            self.pc = int(operands[0])
-        elif (opcode == 'jr'):
-            self.pc = self.rf[int(operands[0][1:])]
-        elif (opcode == 'jal'):
-            self.rf[29] = current_pc
-            self.pc = int(operands[0])
-        elif (opcode == 'li'):
-            self.rf[int(operands[0][1:])] = int(operands[1])
-        elif (opcode == 'lw'):
-            array_op = operands[1]
-            label = array_op[:array_op.find('(')]
-            index = array_op[array_op.find('(')+1:array_op.find(')')]
-            if (index.startswith('$')):
-                index = self.rf[int(index[1:])]
-            else:
-                index = int(index)
-            data_index = self.array_labels[label] + index
-            self.rf[int(operands[0][1:])] = self.mem[data_index]
-        elif (opcode == 'sw'):
-            array_op = operands[0]
-            label = array_op[:array_op.find('(')]
-            index = array_op[array_op.find('(')+1:array_op.find(')')]
-            if (index.startswith('$')):
-                index = self.rf[int(index[1:])]
-            else:
-                index = int(index)
-            data_index = self.array_labels[label] + index
-            self.mem[data_index] = self.rf[int(operands[1][1:])]
-        elif (opcode == 'move'):
-            self.rf[int(operands[0][1:])] = self.rf[int(operands[1][1:])]
-        self.executed += 1
-    
     def execute_available(self, op):
         in_use = 0
         if op in opcodes.arithmetic:
