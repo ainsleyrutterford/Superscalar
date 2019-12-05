@@ -258,21 +258,21 @@ class Processor:
         ready_index = self.rs.find_next_ready()
         if ready_index != None:
             op = self.rs.entries[ready_index].op
-            if self.execute_available(op):
-                # 2. Send the instruction to execute.
-                #    The instruction carries a name (or tag) of the rob_entry used.
-                self.eq.append( self.rs.entries[ready_index] )
-                # 3. Free the rs of the instruction.
-                self.rs.entries[ready_index] = None
+            # if self.execute_available(op):
+            # 2. Send the instruction to execute.
+            #    The instruction carries a name (or tag) of the rob_entry used.
+            self.eq.append( self.rs.entries[ready_index] )
+            # 3. Free the rs of the instruction.
+            self.rs.entries[ready_index] = None
         lsq_ready = self.lsq.find_next_ready()
         if lsq_ready != None:
             op = self.lsq.entries[lsq_ready].op
-            if self.execute_available(op):
-                # 2. Send the instruction to execute.
-                #    The instruction carries a name (or tag) of the rob_entry used.
-                self.eq.append( self.lsq.entries[lsq_ready] )
-                # 3. Free the rs of the instruction.
-                # self.lsq.entries[lsq_ready] = LSQ.LSQ_entry()
+            # if self.execute_available(op):
+            # 2. Send the instruction to execute.
+            #    The instruction carries a name (or tag) of the rob_entry used.
+            self.eq.append( self.lsq.entries[lsq_ready] )
+            # 3. Free the rs of the instruction.
+            # self.lsq.entries[lsq_ready] = LSQ.LSQ_entry()
     
     def write_back(self):
         self.decrement_wbq_cycles()
