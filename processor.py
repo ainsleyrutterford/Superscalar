@@ -46,10 +46,10 @@ class LSQ:
         self.issue   = 0
         self.array_labels = {}
     
-    def find_dest_and_addr(self, op_tuple):
-        opcode = op_tuple[0]
+    def find_dest_and_addr(self, op_tuple, dest_tag):
+        op = op_tuple[0]
         operands = op_tuple[1]
-        if opcode == 'lw':
+        if op == 'lw':
             array_op = operands[1]
             label = array_op[:array_op.find('(')]
             index = array_op[array_op.find('(')+1:array_op.find(')')]
@@ -58,9 +58,23 @@ class LSQ:
             else:
                 index = int(index)
             address = self.array_labels[label] + index
-            return (operands[0], address)
-        else:
-            return ('$32', -1)
+            dest = operands[0]
+        elif op == 'sw':
+            array_op = operands[0]
+            label = array_op[:array_op.find('(')]
+            index = array_op[array_op.find('(')+1:array_op.find(')')]
+            if (index.startswith('$')):
+                index = self.rf[int(index[1:])]
+            else:
+                index = int(index)
+            address = self.array_labels[label] + index
+            self.entries[self.issue].reg = int(operands[1][1:])
+            dest = '$32'
+        self.entries[self.issue].op        = op
+        self.entries[self.issue].dest_tag  = dest_tag
+        self.entries[self.issue].addr      = address
+        self.entries[self.issue].done      = False
+        return dest
 
 
     def fill_next(self, op, operands, dest_tag, addr):
@@ -245,8 +259,7 @@ class Processor:
                 op = op[:-1]
             self.rs.fill_next(op, self.rob.issue, tag1, tag2, val1, val2)
         elif op_tuple[0] in opcodes.memory:
-            dest, addr = self.lsq.find_dest_and_addr(op_tuple)
-            self.lsq.fill_next(op_tuple[0], op_tuple[1], self.rob.issue, addr)
+            dest = self.lsq.find_dest_and_addr(op_tuple, self.rob.issue)
             self.lsq.issue += 1
             self.rob.entries[self.rob.issue].load = True
         elif op_tuple[0] in opcodes.branch:
