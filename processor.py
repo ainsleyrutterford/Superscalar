@@ -5,11 +5,12 @@ class ROB:
 
     class ROB_entry:
         def __init__(self):
-            self.reg    = None
-            self.val    = None
-            self.done   = None
-            self.load   = False
-            self.branch = False
+            self.reg     = None
+            self.val     = None
+            self.done    = None
+            self.load    = False
+            self.branch  = False
+            self.allowed = None
     
     def __init__(self):
         self.entries = [ROB.ROB_entry() for i in range(2048)]
@@ -22,6 +23,11 @@ class ROB:
         self.entries[self.issue].current_pc = op_tuple[2]
         self.entries[self.issue].next_pc = op_tuple[3]
         self.entries[self.issue].branch = True
+
+    def decrement_allowed_counters(self):
+        for entry in self.entries:
+            if entry.done and entry.allowed != None:
+                entry.allowed -= 1
 
 class LSQ:
 
@@ -76,7 +82,8 @@ class LSQ:
     
     def find_next_ready(self):
         for i, entry in enumerate(self.entries):
-            if entry.op != None:
+            if entry.op != None and not entry.done:
+                entry.done = True
                 return i
 
     def can_forward(self, address):
@@ -176,8 +183,10 @@ class Processor:
         for i in range(self.super):
             if self.pc < len(assembly.splitlines()):
                 self.iq.append(self.fetch(assembly))
+        self.decrement_wbq_cycles()
         for i in range(self.super):
             self.write_back()
+        self.rob.decrement_allowed_counters()
         for i in range(self.super):
             self.commit()
         self.cycles += 1
@@ -275,19 +284,18 @@ class Processor:
             # self.lsq.entries[lsq_ready] = LSQ.LSQ_entry()
     
     def write_back(self):
-        self.decrement_wbq_cycles()
         if len(self.wbq) > 0:
             # Only write back if it has been enough cycles
-            if self.wbq[0][2] <= 0:
+            if self.wbq[0][2] <= 0 and self.wbq[0][4] < 0:
                 # 1. Broadcast the name (or tag) and the value of the completed instruction
                 #    back to the rs so that the rs can 'capture' the values.
-                tag, val, cycles, op = self.wbq.pop(0)
+                tag, val, cycles, op, allowed = self.wbq.pop(0)
                 self.rs.capture(tag, val)
                 # 2. Place the broadcast value into the rob_entry used for that instruction.
                 #    Set rob_entry.done to True
                 self.rob.entries[tag].val = val
                 self.rob.entries[tag].done = True
-                # self.rob.entries[tag].fair_game = 0
+                self.rob.entries[tag].allowed = 1
                 if op == 'lw':
                     self.lsq.entries[tag].val = val
     
@@ -302,9 +310,7 @@ class Processor:
         rob_entry = self.rob.entries[self.rob.commit]
         load = rob_entry.load
         branch = rob_entry.branch
-        if rob_entry.done == True:
-            # self.rob.entries[self.rob.commit].fair_game += 1
-            # if self.rob.entries[self.rob.commit].fair_game > 1:
+        if rob_entry.done == True and rob_entry.allowed < 0:
             self.rf[rob_entry.reg] = rob_entry.val
             if self.rat[rob_entry.reg] == self.rob.commit:
                 self.rat[rob_entry.reg] = None
@@ -313,7 +319,7 @@ class Processor:
             if load:
                 lsq_entry = self.lsq.entries[self.lsq.commit]
                 if lsq_entry.op == 'sw':
-                    self.mem[lsq_entry.addr] = lsq_entry.val
+                    self.mem[lsq_entry.addr] = self.rf[lsq_entry.reg]
                 self.lsq.entries[self.lsq.commit] = LSQ.LSQ_entry()
                 self.lsq.commit += 1
             if branch:
@@ -335,18 +341,19 @@ class Processor:
     def execute(self):
         # Could be a reservation station entry or a load store queue entry
         entry = self.eq.pop(0)
+        allowed = 1
 
         if isinstance(entry, RS.RS_entry):
             if entry.op == 'add':
                 # Third entry is how many cycles it will take to execute
-                self.wbq.append( [entry.dest_tag, entry.val1 + entry.val2, 1, entry.op] )
+                self.wbq.append( [entry.dest_tag, entry.val1 + entry.val2, 1, entry.op, allowed] )
             if entry.op == 'sub':
-                self.wbq.append( [entry.dest_tag, entry.val1 - entry.val2, 1, entry.op] )
+                self.wbq.append( [entry.dest_tag, entry.val1 - entry.val2, 1, entry.op, allowed] )
             if entry.op == 'mul':
-                self.wbq.append( [entry.dest_tag, entry.val1 * entry.val2, 2, entry.op] )
+                self.wbq.append( [entry.dest_tag, entry.val1 * entry.val2, 2, entry.op, allowed] )
             
             if entry.op in opcodes.branch:
-                self.wbq.append( [entry.dest_tag, 0, 1, entry.op] )
+                self.wbq.append( [entry.dest_tag, 0, 1, entry.op, allowed] )
 
         elif isinstance(entry, LSQ.LSQ_entry):
             if entry.op == 'lw':
@@ -355,10 +362,9 @@ class Processor:
                 # if forwarding != None:
                 #     self.wbq.append( [entry.dest_tag, self.lsq.entries[forwarding].val, 1, 'lw'] )
                 # else:
-                self.wbq.append( [entry.dest_tag, self.mem[entry.addr], 2, 'lw'] )
+                self.wbq.append( [entry.dest_tag, self.mem[entry.addr], 2, 'lw', allowed] )
             if entry.op == 'sw':
-                self.lsq.entries[self.lsq.commit].val = self.rf[entry.reg]
-                self.wbq.append( [entry.dest_tag, 0, 1, 'sw'] )
+                self.wbq.append( [entry.dest_tag, 0, 1, 'sw', allowed] )
 
 
     def execute_available(self, op):
@@ -380,6 +386,7 @@ class Processor:
         if len(self.wbq) > 0:
             for wb in self.wbq:
                 wb[2] -= 1
+                wb[4] -= 1
 
     def is_running(self):
         if self.rf[31] == 0:
