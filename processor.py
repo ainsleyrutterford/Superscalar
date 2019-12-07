@@ -75,24 +75,6 @@ class LSQ:
         self.entries[self.issue].addr      = address
         self.entries[self.issue].done      = False
         return dest
-
-
-    def fill_next(self, op, operands, dest_tag, addr):
-        self.entries[self.issue].op        = op
-        self.entries[self.issue].dest_tag  = dest_tag
-        self.entries[self.issue].addr      = addr
-        self.entries[self.issue].done      = False
-        if op == 'sw':
-            array_op = operands[0]
-            label = array_op[:array_op.find('(')]
-            index = array_op[array_op.find('(')+1:array_op.find(')')]
-            if (index.startswith('$')):
-                index = self.rf[int(index[1:])]
-            else:
-                index = int(index)
-            address = self.array_labels[label] + index
-            self.entries[self.issue].addr = address
-            self.entries[self.issue].reg = int(operands[1][1:])
     
     def find_next_ready(self):
         for i, entry in enumerate(self.entries):
