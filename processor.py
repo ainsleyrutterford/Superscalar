@@ -175,9 +175,6 @@ class Processor:
         for i in range(self.super):
             self.dispatch()
         for i in range(self.super):
-            if len(self.opq) > 0:
-                self.issue(self.opq.pop(0))
-        for i in range(self.super):
             if len(self.iq) > 0:
                 self.opq.append(self.decode(self.iq.pop(0)))
         for i in range(self.super):
@@ -189,6 +186,9 @@ class Processor:
         self.rob.decrement_allowed_counters()
         for i in range(self.super):
             self.commit()
+        for i in range(self.super):
+            if len(self.opq) > 0:
+                self.issue(self.opq.pop(0))
         self.cycles += 1
         print(f'cycle: {self.cycles}')
         print(f'executed: {self.executed}')
