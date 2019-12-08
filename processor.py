@@ -184,25 +184,29 @@ class Processor:
         self.eq = []
         self.wbq = []
 
+        self.new_iq  = []
+        self.new_opq = []
+        self.new_eq  = []
+
         self.predictor = predictor.Predictor('two_bit')
         self.super = 4
         self.cycles = 0
         self.executed = 0
 
     def cycle(self, assembly):
-        new_iq  = []
-        new_opq = []
-        new_eq  = []
+        self.new_iq  = []
+        self.new_opq = []
+        self.new_eq  = []
 
         # Fetch
         for i in range(self.super):
             if self.pc < len(assembly.splitlines()):
-                new_iq.append(self.fetch(assembly))
+                self.new_iq.append(self.fetch(assembly))
 
         # Decode
         for i in range(self.super):
             if len(self.iq) > 0:
-                new_opq.append(self.decode(self.iq.pop(0)))
+                self.new_opq.append(self.decode(self.iq.pop(0)))
 
         # Issue
         for i in range(self.super):
@@ -212,7 +216,7 @@ class Processor:
         # Dispatch
         self.decrement_rs_and_lsq_counters()
         for i in range(self.super):
-            new_eq += self.dispatch()
+            self.new_eq += self.dispatch()
 
         # Execute
         for i in range(self.super):
@@ -224,28 +228,13 @@ class Processor:
         for i in range(self.super):
             self.write_back()
 
-        # Commit
-        self.rob.decrement_allowed_counters()
-        for i in range(self.super):
-            self.commit()
-
-        self.iq  += new_iq
-        self.opq += new_opq
-        self.eq  += new_eq
+        self.iq  += self.new_iq
+        self.opq += self.new_opq
+        self.eq  += self.new_eq
         
         self.cycles += 1
-        print(f'cycle: {self.cycles}')
-        print(f'executed: {self.executed}')
-        print(f'instruction queue: {self.iq}')
-        print(f'op queue: {self.opq}')
-        print(f'register file: {self.rf}')
-        print(f'rob: { [f"{e.reg}, {e.val}, {e.done}" for e in self.rob.entries[:6]] }')
-        print(f'lsq: { [f"{e.op}, {e.dest_tag}, {e.addr}, {e.val}, {e.done}" for e in self.lsq.entries[:7]] }')
-        print(f'rat: {self.rat[:6]}')
-        print(f'res station: { [f"{rs.op}, {rs.dest_tag}, {rs.tag1}, {rs.tag2}, {rs.val1}, {rs.val2}" for rs in filter(None, self.rs.entries[:6])] }')
-        # print(f'exec queue: { [f"{rs.op}, {rs.dest_tag}, {rs.tag1}, {rs.tag2}, {rs.val1}, {rs.val2}" for rs in filter(None, self.eq[:6])] }')
-        print(f'writeback queue: {self.wbq}')
-        print(f'memory: {self.mem}')
+
+        self.print_stats()
 
     def fetch(self, assembly):
         instruction = assembly.splitlines()[self.pc]
@@ -368,11 +357,9 @@ class Processor:
                 #    Set rob_entry.done to True
                 self.rob.entries[tag].val = val
                 self.rob.entries[tag].done = True
-                self.rob.entries[tag].allowed = 1
                 if op == 'lw':
                     self.lsq.entries[tag].val = val
-    
-    def commit(self):
+        # Commit
         # 1. Test if next instruction at commit pointer of rob is done.
         # 2. If it is done, commit:
         #        a. Write the rob_entry.val to the rob_entry.reg.
@@ -383,7 +370,7 @@ class Processor:
         rob_entry = self.rob.entries[self.rob.commit]
         load = rob_entry.load
         branch = rob_entry.branch
-        if rob_entry.done == True and rob_entry.allowed < 0:
+        if rob_entry.done == True:
             self.rf[rob_entry.reg] = rob_entry.val
             if self.rat[rob_entry.reg] == self.rob.commit:
                 self.rat[rob_entry.reg] = None
@@ -410,6 +397,9 @@ class Processor:
                     self.eq = []
                     self.wbq = []
                     self.pc = pc
+                    self.new_iq  = []
+                    self.new_opq = []
+                    self.new_eq  = []
             self.executed += 1
 
     def execute_available(self, op):
@@ -446,3 +436,17 @@ class Processor:
             return True
         else:
             return False
+    
+    def print_stats(self):
+        print(f'cycle: {self.cycles}')
+        print(f'executed: {self.executed}')
+        print(f'instruction queue: {self.iq}')
+        print(f'op queue: {self.opq}')
+        print(f'register file: {self.rf}')
+        print(f'rob: { [f"{e.reg}, {e.val}, {e.done}" for e in self.rob.entries[:10]] }')
+        print(f'lsq: { [f"{e.op}, {e.dest_tag}, {e.addr}, {e.val}, {e.done}" for e in self.lsq.entries[:10]] }')
+        print(f'rat: {self.rat[:20]}')
+        print(f'res station: { [f"{rs.op}, {rs.dest_tag}, {rs.tag1}, {rs.tag2}, {rs.val1}, {rs.val2}" for rs in filter(None, self.rs.entries[:6])] }')
+        # print(f'exec queue: { [f"{rs.op}, {rs.dest_tag}, {rs.tag1}, {rs.tag2}, {rs.val1}, {rs.val2}" for rs in filter(None, self.eq[:6])] }')
+        print(f'writeback queue: {self.wbq}')
+        print(f'memory: {self.mem}')

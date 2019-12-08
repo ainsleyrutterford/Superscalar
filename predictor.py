@@ -32,18 +32,30 @@ class Predictor:
             if (rf[int(operands[0][1:])] == rf[int(operands[1][1:])]):
                 correct_pc = int(operands[2])
                 taken = True
+            else:
+                correct_pc = pc + 1
+                taken = False
         if op == 'bne':
             if (rf[int(operands[0][1:])] != rf[int(operands[1][1:])]):
                 correct_pc = int(operands[2])
                 taken = True
+            else:
+                correct_pc = pc + 1
+                taken = False
         if op == 'ble':
             if (rf[int(operands[0][1:])] <= rf[int(operands[1][1:])]):
                 correct_pc = int(operands[2])
                 taken = True
+            else:
+                correct_pc = pc + 1
+                taken = False
         if op == 'blt':
             if (rf[int(operands[0][1:])] <  rf[int(operands[1][1:])]):
                 correct_pc = int(operands[2])
                 taken = True
+            else:
+                correct_pc = pc + 1
+                taken = False
         if op == 'j':
             correct_pc = int(operands[0])
             taken = True
