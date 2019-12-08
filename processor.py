@@ -176,7 +176,6 @@ class Processor:
         self.iq = []
         self.opq = []
         self.rf = [0] * 33 # (32 and an extra as a dummy for sw ROB entries)
-        # self.rf = [12, 7, 4, 2, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         self.mem = []
         self.rob = ROB()
         self.lsq = LSQ()
@@ -185,7 +184,7 @@ class Processor:
         self.eq = []
         self.wbq = []
 
-        self.predictor = predictor.Predictor('not_taken')
+        self.predictor = predictor.Predictor('two_bit')
         self.super = 4
         self.cycles = 0
         self.executed = 0
@@ -328,7 +327,34 @@ class Processor:
             # 3. Free the rs of the instruction.
             # self.lsq.entries[lsq_ready] = LSQ.LSQ_entry()
         return ready_entries
-    
+
+    def execute(self, entry):
+        # Could be a reservation station entry or a load store queue entry
+        allowed = 1
+
+        if isinstance(entry, RS.RS_entry):
+            if entry.op == 'add':
+                # Third entry is how many cycles it will take to execute
+                self.wbq.append( [entry.dest_tag, entry.val1 + entry.val2, 1, entry.op, allowed] )
+            if entry.op == 'sub':
+                self.wbq.append( [entry.dest_tag, entry.val1 - entry.val2, 1, entry.op, allowed] )
+            if entry.op == 'mul':
+                self.wbq.append( [entry.dest_tag, entry.val1 * entry.val2, 2, entry.op, allowed] )
+            
+            if entry.op in opcodes.branch:
+                self.wbq.append( [entry.dest_tag, 0, 1, entry.op, allowed] )
+
+        elif isinstance(entry, LSQ.LSQ_entry):
+            if entry.op == 'lw':
+                # Maybe do forwarding here?
+                # forwarding = self.lsq.can_forward(entry.addr)
+                # if forwarding != None:
+                #     self.wbq.append( [entry.dest_tag, self.lsq.entries[forwarding].val, 1, 'lw'] )
+                # else:
+                self.wbq.append( [entry.dest_tag, self.mem[entry.addr], 2, 'lw', allowed] )
+            if entry.op == 'sw':
+                self.wbq.append( [entry.dest_tag, 0, 1, 'sw', allowed] )
+
     def write_back(self):
         if len(self.wbq) > 0:
             # Only write back if it has been enough cycles
@@ -385,35 +411,6 @@ class Processor:
                     self.wbq = []
                     self.pc = pc
             self.executed += 1
-
-
-    def execute(self, entry):
-        # Could be a reservation station entry or a load store queue entry
-        allowed = 1
-
-        if isinstance(entry, RS.RS_entry):
-            if entry.op == 'add':
-                # Third entry is how many cycles it will take to execute
-                self.wbq.append( [entry.dest_tag, entry.val1 + entry.val2, 1, entry.op, allowed] )
-            if entry.op == 'sub':
-                self.wbq.append( [entry.dest_tag, entry.val1 - entry.val2, 1, entry.op, allowed] )
-            if entry.op == 'mul':
-                self.wbq.append( [entry.dest_tag, entry.val1 * entry.val2, 2, entry.op, allowed] )
-            
-            if entry.op in opcodes.branch:
-                self.wbq.append( [entry.dest_tag, 0, 1, entry.op, allowed] )
-
-        elif isinstance(entry, LSQ.LSQ_entry):
-            if entry.op == 'lw':
-                # Maybe do forwarding here?
-                # forwarding = self.lsq.can_forward(entry.addr)
-                # if forwarding != None:
-                #     self.wbq.append( [entry.dest_tag, self.lsq.entries[forwarding].val, 1, 'lw'] )
-                # else:
-                self.wbq.append( [entry.dest_tag, self.mem[entry.addr], 2, 'lw', allowed] )
-            if entry.op == 'sw':
-                self.wbq.append( [entry.dest_tag, 0, 1, 'sw', allowed] )
-
 
     def execute_available(self, op):
         in_use = 0
