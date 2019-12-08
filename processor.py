@@ -41,6 +41,7 @@ class LSQ:
             self.reg       = None
             self.done      = None
             self.wait_tag  = None
+            self.allowed   = 1
     
     def __init__(self):
         self.entries = [LSQ.LSQ_entry() for i in range(2048)]
@@ -95,7 +96,7 @@ class LSQ:
     
     def find_next_ready(self):
         for i, entry in enumerate(self.entries):
-            if entry.op != None and not entry.done and entry.wait_tag == None:
+            if entry.op != None and not entry.done and entry.wait_tag == None and entry.allowed < 0:
                 entry.done = True
                 return i
 
@@ -124,6 +125,7 @@ class RS:
             self.val1       = val1
             self.val2       = val2
             self.dispatched = False
+            self.allowed    = 1
         
     def __init__(self):
         self.entries = [None] * 128
@@ -151,7 +153,7 @@ class RS:
         index = float('inf')
         for i, entry in enumerate(self.entries):
             if entry != None:
-                if entry.val1 != None and entry.val2 != None and entry.dispatched == False:
+                if entry.val1 != None and entry.val2 != None and entry.dispatched == False and entry.allowed < 0:
                     if entry.dest_tag < index: # Always return oldest entry
                         ready = i
                         index = entry.dest_tag
@@ -189,26 +191,49 @@ class Processor:
         self.executed = 0
 
     def cycle(self, assembly):
-        for i in range(self.super):
-            if len(self.eq) > 0:
-                self.execute()
-        for i in range(self.super):
-            self.dispatch()
-        for i in range(self.super):
-            if len(self.iq) > 0:
-                self.opq.append(self.decode(self.iq.pop(0)))
+        new_iq  = []
+        new_opq = []
+        new_eq  = []
+
+        # Fetch
         for i in range(self.super):
             if self.pc < len(assembly.splitlines()):
-                self.iq.append(self.fetch(assembly))
-        self.decrement_wbq_cycles()
+                new_iq.append(self.fetch(assembly))
+
+        # Decode
         for i in range(self.super):
-            self.write_back()
-        self.rob.decrement_allowed_counters()
-        for i in range(self.super):
-            self.commit()
+            if len(self.iq) > 0:
+                new_opq.append(self.decode(self.iq.pop(0)))
+
+        # Issue
         for i in range(self.super):
             if len(self.opq) > 0:
                 self.issue(self.opq.pop(0))
+
+        # Dispatch
+        self.decrement_rs_and_lsq_counters()
+        for i in range(self.super):
+            new_eq += self.dispatch()
+
+        # Execute
+        for i in range(self.super):
+            if len(self.eq) > 0:
+                self.execute(self.eq.pop(0))
+
+        # Writeback
+        self.decrement_wbq_cycles()
+        for i in range(self.super):
+            self.write_back()
+
+        # Commit
+        self.rob.decrement_allowed_counters()
+        for i in range(self.super):
+            self.commit()
+
+        self.iq  += new_iq
+        self.opq += new_opq
+        self.eq  += new_eq
+        
         self.cycles += 1
         print(f'cycle: {self.cycles}')
         print(f'executed: {self.executed}')
@@ -282,6 +307,7 @@ class Processor:
         self.rob.issue += 1
 
     def dispatch(self):
+        ready_entries = []
         # 1. Check if operands are available and ready.
         ready_index = self.rs.find_next_ready()
         if ready_index != None:
@@ -289,7 +315,7 @@ class Processor:
             # if self.execute_available(op):
             # 2. Send the instruction to execute.
             #    The instruction carries a name (or tag) of the rob_entry used.
-            self.eq.append( self.rs.entries[ready_index] )
+            ready_entries.append(self.rs.entries[ready_index])
             # 3. Free the rs of the instruction.
             self.rs.entries[ready_index] = None
         lsq_ready = self.lsq.find_next_ready()
@@ -298,9 +324,10 @@ class Processor:
             # if self.execute_available(op):
             # 2. Send the instruction to execute.
             #    The instruction carries a name (or tag) of the rob_entry used.
-            self.eq.append( self.lsq.entries[lsq_ready] )
+            ready_entries.append(self.lsq.entries[lsq_ready])
             # 3. Free the rs of the instruction.
             # self.lsq.entries[lsq_ready] = LSQ.LSQ_entry()
+        return ready_entries
     
     def write_back(self):
         if len(self.wbq) > 0:
@@ -360,9 +387,8 @@ class Processor:
             self.executed += 1
 
 
-    def execute(self):
+    def execute(self, entry):
         # Could be a reservation station entry or a load store queue entry
-        entry = self.eq.pop(0)
         allowed = 1
 
         if isinstance(entry, RS.RS_entry):
@@ -409,6 +435,14 @@ class Processor:
             for wb in self.wbq:
                 wb[2] -= 1
                 wb[4] -= 1
+    
+    def decrement_rs_and_lsq_counters(self):
+        for entry in self.lsq.entries:
+            if entry.op != None:
+                entry.allowed -= 1
+        for entry in self.rs.entries:
+            if entry != None:
+                entry.allowed -= 1
 
     def is_running(self):
         if self.rf[31] == 0:
