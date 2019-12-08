@@ -35,10 +35,12 @@ class LSQ:
         def __init__(self):
             self.op        = None
             self.dest_tag  = None
+            self.base_addr = None
             self.addr      = None
             self.val       = None
             self.reg       = None
             self.done      = None
+            self.wait_tag  = None
     
     def __init__(self):
         self.entries = [LSQ.LSQ_entry() for i in range(2048)]
@@ -46,7 +48,7 @@ class LSQ:
         self.issue   = 0
         self.array_labels = {}
     
-    def find_dest_and_addr(self, op_tuple, dest_tag):
+    def find_dest_and_addr(self, op_tuple, dest_tag, rat, rf):
         op = op_tuple[0]
         operands = op_tuple[1]
         if op == 'lw':
@@ -54,31 +56,46 @@ class LSQ:
             label = array_op[:array_op.find('(')]
             index = array_op[array_op.find('(')+1:array_op.find(')')]
             if (index.startswith('$')):
-                index = self.rf[int(index[1:])]
+                if rat[int(index[1:])] == None:
+                    wait_tag = None
+                    index = rf[int(index[1:])]
+                else:
+                    wait_tag = rat[int(index[1:])]
+                    index = None
             else:
+                wait_tag = None
                 index = int(index)
-            address = self.array_labels[label] + index
+            base_address = self.array_labels[label]
             dest = operands[0]
         elif op == 'sw':
             array_op = operands[0]
             label = array_op[:array_op.find('(')]
             index = array_op[array_op.find('(')+1:array_op.find(')')]
             if (index.startswith('$')):
-                index = self.rf[int(index[1:])]
+                if rat[int(index[1:])] == None:
+                    wait_tag = None
+                    index = rf[int(index[1:])]
+                else:
+                    wait_tag = rat[int(index[1:])]
+                    index = None
             else:
+                wait_tag = None
                 index = int(index)
-            address = self.array_labels[label] + index
+            base_address = self.array_labels[label]
             self.entries[self.issue].reg = int(operands[1][1:])
             dest = '$32'
         self.entries[self.issue].op        = op
         self.entries[self.issue].dest_tag  = dest_tag
-        self.entries[self.issue].addr      = address
+        self.entries[self.issue].base_addr = base_address
+        if index != None:
+            self.entries[self.issue].addr  = base_address + index
         self.entries[self.issue].done      = False
+        self.entries[self.issue].wait_tag  = wait_tag
         return dest
     
     def find_next_ready(self):
         for i, entry in enumerate(self.entries):
-            if entry.op != None and not entry.done:
+            if entry.op != None and not entry.done and entry.wait_tag == None:
                 entry.done = True
                 return i
 
@@ -88,6 +105,13 @@ class LSQ:
             if entry.addr == address and entry.op == 'sw':
                 latest = i
         return latest
+    
+    def capture(self, wait_tag, val):
+        for entry in self.entries:
+            if entry != None:
+                if entry.wait_tag == wait_tag:
+                    entry.addr = entry.base_addr + val
+                    entry.wait_tag = None
 
 class RS:
 
@@ -241,7 +265,7 @@ class Processor:
                 op = op[:-1]
             self.rs.fill_next(op, self.rob.issue, tag1, tag2, val1, val2)
         elif op_tuple[0] in opcodes.memory:
-            dest = self.lsq.find_dest_and_addr(op_tuple, self.rob.issue)
+            dest = self.lsq.find_dest_and_addr(op_tuple, self.rob.issue, self.rat, self.rf)
             self.lsq.issue += 1
             self.rob.entries[self.rob.issue].load = True
         elif op_tuple[0] in opcodes.branch:
@@ -286,6 +310,7 @@ class Processor:
                 #    back to the rs so that the rs can 'capture' the values.
                 tag, val, cycles, op, allowed = self.wbq.pop(0)
                 self.rs.capture(tag, val)
+                self.lsq.capture(tag, val)
                 # 2. Place the broadcast value into the rob_entry used for that instruction.
                 #    Set rob_entry.done to True
                 self.rob.entries[tag].val = val
@@ -324,7 +349,9 @@ class Processor:
                     self.iq = []
                     self.opq = []
                     self.rob = ROB()
+                    array_labels = self.lsq.array_labels
                     self.lsq = LSQ()
+                    self.lsq.array_labels = array_labels
                     self.rat = [None] * 128
                     self.rs = RS()
                     self.eq = []
