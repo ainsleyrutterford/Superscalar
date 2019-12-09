@@ -5,11 +5,21 @@ class Predictor:
     bht = [0] * 1024
 
     def __init__(self, method):
+        if method == 'taken':
+            self.predict = self.taken
         if method == 'not_taken':
             self.predict = self.not_taken
         elif method == 'two_bit':
             self.predict = self.two_bit
     
+    def taken(self, pc, instruction):
+        opcode = instruction[:instruction.find(' ')]
+        if opcode == 'j':
+            return int(instruction.split(' ')[1:][0])
+        if opcode == 'beq' or opcode == 'bne' or opcode == 'ble' or opcode == 'blt':
+            return int(instruction.split(' ')[1:][2])
+        return pc + 1
+
     def not_taken(self, pc, instruction):
         opcode = instruction[:instruction.find(' ')]
         if opcode == 'j':
