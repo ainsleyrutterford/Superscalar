@@ -340,7 +340,11 @@ class Processor:
                 # if forwarding != None:
                 #     self.wbq.append( [entry.dest_tag, self.lsq.entries[forwarding].val, 1, 'lw'] )
                 # else:
-                self.wbq.append( [entry.dest_tag, self.mem[entry.addr], 2, 'lw', allowed] )
+                if (entry.addr >= len(self.mem)):
+                    # Branch misprediction here so just dont execute, it should be sorted at commit
+                    self.wbq.append( [entry.dest_tag, -1, 2, 'lw', allowed] )
+                else:
+                    self.wbq.append( [entry.dest_tag, self.mem[entry.addr], 2, 'lw', allowed] )
             if entry.op == 'sw':
                 self.wbq.append( [entry.dest_tag, 0, 1, 'sw', allowed] )
 
