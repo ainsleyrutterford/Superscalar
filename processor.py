@@ -379,6 +379,8 @@ class Processor:
             if self.rat[rob_entry.reg] == self.rob.commit:
                 self.rat[rob_entry.reg] = None
             self.rob.entries[self.rob.commit] = ROB.ROB_entry()
+            self.rs.capture(self.rob.commit, rob_entry.val)
+            self.lsq.capture(self.rob.commit, rob_entry.val)
             self.rob.commit += 1
             if load:
                 lsq_entry = self.lsq.entries[self.lsq.commit]
