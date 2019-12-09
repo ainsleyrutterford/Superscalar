@@ -26,7 +26,6 @@ cpu = processor.Processor()
 # while cpu.is_running():
 #     cpu.cycle(program)
 
-# for i in range(len(program.splitlines())):
 while(1):
     input()
     print('Cycling cpu...')
