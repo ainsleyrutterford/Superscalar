@@ -23,16 +23,16 @@ except IOError:
 program = assembler.replace_labels(assembler.strip_comments(assembly))
 cpu = processor.Processor()
 
-# while cpu.is_running():
-#     cpu.cycle(program)
-
-while(1):
-    input()
-    print('Cycling cpu...')
+while cpu.is_running():
     cpu.cycle(program)
 
-print(f'Registers: {cpu.rf}')
+# while(1):
+#     input()
+#     print('Cycling cpu...')
+#     cpu.cycle(program)
+
+print(f'Registers: {cpu.rf[:32]}')
 print(f'Memory: {cpu.mem}')
 print(f'{cpu.executed} instructions executed in {cpu.cycles} cycles.')
-# instructions_per_cycle = float(cpu.executed) / float(cpu.cycles)
-# print(f'{instructions_per_cycle:.2f} instructions per cycle achieved.')
+instructions_per_cycle = float(cpu.executed) / float(cpu.cycles)
+print(f'{instructions_per_cycle:.2f} instructions per cycle achieved.')
