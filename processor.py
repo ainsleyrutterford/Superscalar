@@ -42,6 +42,7 @@ class LSQ:
             self.done      = None
             self.wait_tag  = None
             self.allowed   = 1
+            self.complete  = None
     
     def __init__(self):
         self.entries = [LSQ.LSQ_entry() for i in range(2048)]
@@ -97,8 +98,13 @@ class LSQ:
     def find_next_ready(self):
         for i, entry in enumerate(self.entries):
             if entry.op != None and not entry.done and entry.wait_tag == None and entry.allowed < 0:
-                entry.done = True
-                return i
+                if i > 0:
+                    if self.entries[i-1].complete:
+                        entry.done = True
+                        return i
+                else:
+                    entry.done = True
+                    return i
 
     def can_forward(self, address):
         latest = None
@@ -361,8 +367,6 @@ class Processor:
                 #    Set rob_entry.done to True
                 self.rob.entries[tag].val = val
                 self.rob.entries[tag].done = True
-                if op == 'lw':
-                    self.lsq.entries[tag].val = val
         # Commit
         # 1. Test if next instruction at commit pointer of rob is done.
         # 2. If it is done, commit:
@@ -386,7 +390,10 @@ class Processor:
                 lsq_entry = self.lsq.entries[self.lsq.commit]
                 if lsq_entry.op == 'sw':
                     self.mem[lsq_entry.addr] = self.rf[lsq_entry.reg]
+                elif lsq_entry.op == 'lw':
+                    self.rf[rob_entry.reg] = self.mem[lsq_entry.addr]
                 self.lsq.entries[self.lsq.commit] = LSQ.LSQ_entry()
+                self.lsq.entries[self.lsq.commit].complete = True
                 self.lsq.commit += 1
             if branch:
                 correct, pc = self.predictor.check(self.rf, rob_entry.op, 
