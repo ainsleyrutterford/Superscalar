@@ -2,7 +2,7 @@ arithmetic = ['add', 'sub']
 
 immediate = ['addi', 'subi']
 
-advanced = ['mul']
+advanced = ['mul', 'div', 'imul', 'idiv', 'mod']
 
 memory = ['lw', 'sw']
 

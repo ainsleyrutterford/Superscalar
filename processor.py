@@ -194,7 +194,7 @@ class Processor:
         self.new_opq = []
         self.new_eq  = []
 
-        self.predictor = predictor.Predictor('two_bit')
+        self.predictor = predictor.Predictor('taken')
         self.super = 4
         self.cycles = 0
         self.executed = 0
@@ -335,6 +335,14 @@ class Processor:
                 self.wbq.append( [entry.dest_tag, entry.val1 - entry.val2, 1, entry.op, allowed] )
             if entry.op == 'mul':
                 self.wbq.append( [entry.dest_tag, entry.val1 * entry.val2, 2, entry.op, allowed] )
+            if entry.op == 'imul':
+                self.wbq.append( [entry.dest_tag, int(int(entry.val1) * int(entry.val2)), 2, entry.op, allowed] )
+            if entry.op == 'div':
+                self.wbq.append( [entry.dest_tag, entry.val1 / entry.val2, 5, entry.op, allowed] )
+            if entry.op == 'idiv':
+                self.wbq.append( [entry.dest_tag, int(int(entry.val1) / int(entry.val2)), 2, entry.op, allowed] )
+            if entry.op == 'mod':
+                self.wbq.append( [entry.dest_tag, int(int(entry.val1) % int(entry.val2)), 2, entry.op, allowed] )
             
             if entry.op in opcodes.branch:
                 self.wbq.append( [entry.dest_tag, 0, 1, entry.op, allowed] )
