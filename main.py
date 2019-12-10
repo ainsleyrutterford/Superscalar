@@ -31,8 +31,28 @@ while cpu.is_running():
 #     print('Cycling cpu...')
 #     cpu.cycle(program)
 
+print()
 print(f'Registers: {cpu.rf[:32]}')
-print(f'Memory: {cpu.mem}')
-print(f'{cpu.executed} instructions executed in {cpu.cycles} cycles.')
+print(f'Memory:    {cpu.mem}')
+print(f'Instructions executed:         {cpu.executed}')
+print(f'Cycles taken:                  {cpu.cycles}')
+
 instructions_per_cycle = float(cpu.executed) / float(cpu.cycles)
-print(f'{instructions_per_cycle:.2f} instructions per cycle achieved.')
+
+print(f'IPC achieved:                  {instructions_per_cycle:.2f}')
+print(f'Total branches:                {cpu.predictor.correct + cpu.predictor.incorrect}')
+print(f'Correctly predicted:           {cpu.predictor.correct}')
+
+distances = [cpu.predictor.branches[i + 1] - cpu.predictor.branches[i] for i in range(len(cpu.predictor.branches) - 1)]
+
+if len(distances) == 0:
+    average = float('inf')
+    accuracy = 100
+else:
+    average = sum(distances) / len(distances)
+    accuracy = 100 * cpu.predictor.correct / (cpu.predictor.correct + cpu.predictor.incorrect)
+
+print(f'Branch prediction accuracy:    {accuracy:.1f}%')
+
+print(f'Average branch distance:       {average:.1f}')
+print()

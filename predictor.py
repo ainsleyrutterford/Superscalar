@@ -3,6 +3,9 @@ class Predictor:
     predict = lambda: None
     btb = [0] * 1024
     bht = [0] * 1024
+    correct = 0
+    incorrect = 0
+    branches = []
 
     def __init__(self, method):
         if method == 'taken':
@@ -35,7 +38,7 @@ class Predictor:
         else:
             return pc + 1
     
-    def check(self, rf, op, operands, pc, next_pc):
+    def check(self, rf, op, operands, pc, next_pc, executed):
         correct_pc = next_pc
         taken = False
         if op == 'beq':
@@ -71,10 +74,16 @@ class Predictor:
             taken = True
 
         self.update_two_bit(pc, correct_pc, taken)
+        if op != 'j':
+            self.branches.append(executed)
 
         if next_pc == correct_pc:
+            if op != 'j':
+                self.correct += 1
             return (True, correct_pc)
         else:
+            if op != 'j':
+                self.incorrect += 1
             return (False, correct_pc)
 
 

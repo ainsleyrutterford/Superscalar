@@ -405,7 +405,7 @@ class Processor:
                 self.lsq.commit += 1
             if branch:
                 correct, pc = self.predictor.check(self.rf, rob_entry.op, 
-                rob_entry.operands, rob_entry.current_pc, rob_entry.next_pc)
+                rob_entry.operands, rob_entry.current_pc, rob_entry.next_pc, self.executed)
                 if not correct:
                     self.iq = []
                     self.opq = []
