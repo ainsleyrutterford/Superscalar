@@ -240,7 +240,7 @@ class Processor:
         
         self.cycles += 1
 
-        self.print_stats()
+        # self.print_stats()
 
     def fetch(self, assembly):
         instruction = assembly.splitlines()[self.pc]
