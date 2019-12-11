@@ -47,16 +47,16 @@ for:
     addi $3 $4 0       ; i = k
 while:
     lw $7 r($3)        ; $7 = r[i]
-    imul $5 $2 $3       ; b = 2 * i
+    imul $5 $2 $3      ; b = 2 * i
     sub $5 $5 $1       ; b = 2 * i - 1
-    imul $9 $7 $8       ; $9 = r[i] * 10000
+    imul $9 $7 $8      ; $9 = r[i] * 10000
     add $6 $6 $9       ; d += r[i] * 10000
     mod $16 $6 $5      ; $16 = d % b
     sw r($3) $16       ; r[i] = d % b
     idiv $6 $6 $5      ; d = d / b
     sub $3 $3 $1       ; i--
     beq $3 $0 'break'  ; if (i == 0) break
-    imul $6 $6 $3       ; d = d * i
+    imul $6 $6 $3      ; d = d * i
     j 'while'
 break:
     idiv $11 $6 $8     ; $11 = d / 10000
