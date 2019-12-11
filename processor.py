@@ -12,8 +12,8 @@ class ROB:
             self.branch  = False
             self.allowed = None
     
-    def __init__(self):
-        self.entries = [ROB.ROB_entry() for i in range(32)]
+    def __init__(self, size):
+        self.entries = [ROB.ROB_entry() for i in range(size)]
         self.commit  = 0
         self.issue   = 0
     
@@ -190,14 +190,15 @@ class RS:
                 entry.counter += 1
 
 class Processor:
-    def __init__(self):
+    def __init__(self, width, prediction, rob):
         self.pc = 0
 
         self.iq = []
         self.opq = []
         self.rf = [0] * 33 # (32 and an extra as a dummy for sw ROB entries)
         self.mem = []
-        self.rob = ROB()
+        self.rob_size = rob
+        self.rob = ROB(self.rob_size)
         self.lsq = LSQ()
         self.rat = [None] * 128
         self.rs = RS()
@@ -208,8 +209,8 @@ class Processor:
         self.new_opq = []
         self.new_eq  = []
 
-        self.predictor = predictor.Predictor('taken')
-        self.super = 4
+        self.predictor = predictor.Predictor(prediction)
+        self.super = width
         self.cycles = 0
         self.executed = 0
 
@@ -428,7 +429,7 @@ class Processor:
                 if not correct:
                     self.iq = []
                     self.opq = []
-                    self.rob = ROB()
+                    self.rob = ROB(self.rob_size)
                     array_labels = self.lsq.array_labels
                     self.lsq = LSQ()
                     self.lsq.array_labels = array_labels
