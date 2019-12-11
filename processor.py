@@ -13,7 +13,7 @@ class ROB:
             self.allowed = None
     
     def __init__(self):
-        self.entries = [ROB.ROB_entry() for i in range(2048)]
+        self.entries = [ROB.ROB_entry() for i in range(32)]
         self.commit  = 0
         self.issue   = 0
     
@@ -28,6 +28,10 @@ class ROB:
         for entry in self.entries:
             if entry.done and entry.allowed != None:
                 entry.allowed -= 1
+    
+    def available(self):
+        in_use = len([e for e in self.entries if e.reg != None])
+        return in_use < len(self.entries) - 1
 
 class LSQ:
 
@@ -132,9 +136,10 @@ class RS:
             self.val2       = val2
             self.dispatched = False
             self.allowed    = 1
+            self.counter    = 0
         
     def __init__(self):
-        self.entries = [None] * 128
+        self.entries = [None] * 256
 
     def split(self, op_tuple):
         opcode = op_tuple[0]
@@ -156,13 +161,13 @@ class RS:
 
     def find_next_ready(self):
         ready = None
-        index = float('inf')
+        counter = 0
         for i, entry in enumerate(self.entries):
             if entry != None:
                 if entry.val1 != None and entry.val2 != None and entry.dispatched == False and entry.allowed < 0:
-                    if entry.dest_tag < index: # Always return oldest entry
+                    if entry.counter > counter: # Always return oldest entry
                         ready = i
-                        index = entry.dest_tag
+                        counter = entry.counter
         return ready
 
     def capture(self, tag, val):
@@ -174,6 +179,15 @@ class RS:
                 if entry.tag2 == tag:
                     entry.val2 = val
                     entry.tag2 = None
+    
+    def available(self):
+        in_use = len([e for e in self.entries if e != None])
+        return in_use < len(self.entries) - 1
+    
+    def increment_counters(self):
+        for entry in self.entries:
+            if entry != None:
+                entry.counter += 1
 
 class Processor:
     def __init__(self):
@@ -216,7 +230,7 @@ class Processor:
 
         # Issue
         for i in range(self.super):
-            if len(self.opq) > 0:
+            if len(self.opq) > 0 and self.rob.available() and self.rs.available():
                 self.issue(self.opq.pop(0))
 
         # Dispatch
@@ -299,8 +313,11 @@ class Processor:
         self.rat[int(dest[1:])] = self.rob.issue
         # Increment the rob issue pointer.
         self.rob.issue += 1
+        if self.rob.issue == len(self.rob.entries):
+            self.rob.issue = 0
 
     def dispatch(self):
+        self.rs.increment_counters()
         ready_entries = []
         # 1. Check if operands are available and ready.
         ready_index = self.rs.find_next_ready()
@@ -394,6 +411,8 @@ class Processor:
             self.rs.capture(self.rob.commit, rob_entry.val)
             self.lsq.capture(self.rob.commit, rob_entry.val)
             self.rob.commit += 1
+            if self.rob.commit == len(self.rob.entries):
+                self.rob.commit = 0
             if load:
                 lsq_entry = self.lsq.entries[self.lsq.commit]
                 if lsq_entry.op == 'sw':
