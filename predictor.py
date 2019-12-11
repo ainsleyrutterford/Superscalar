@@ -2,7 +2,7 @@ class Predictor:
 
     predict = lambda: None
     btb = [0] * 1024
-    bht = [0] * 1024
+    bht = [[0 for x in range(6)] for y in range(1024)] 
     correct = 0
     incorrect = 0
     branches = []
@@ -33,7 +33,8 @@ class Predictor:
         opcode = instruction[:instruction.find(' ')]
         if opcode == 'j':
             return int(instruction.split(' ')[1:][0])
-        if self.bht[pc] > 1:
+        index = self.bht[pc][0] * 2 + self.bht[pc][1] + 2
+        if self.bht[pc][index] > 1:
             return self.btb[pc]
         else:
             return pc + 1
@@ -88,8 +89,15 @@ class Predictor:
 
 
     def update_two_bit(self, pc, correct_pc, taken):
-        if taken and self.bht[pc] < 3:
+        index = self.bht[pc][0] * 2 + self.bht[pc][1] + 2
+        self.bht[pc][0] = self.bht[pc][1]
+        if taken and self.bht[pc][index] < 3:
             self.btb[pc] = correct_pc
-            self.bht[pc] += 1
-        elif not taken and self.bht[pc] > 0:
-            self.bht[pc] -= 1
+            self.bht[pc][index] += 1
+        elif not taken and self.bht[pc][index] > 0:
+            self.btb[pc] = correct_pc
+            self.bht[pc][index] -= 1
+        if taken:
+            self.bht[pc][1] = 1
+        else:
+            self.bht[pc][1] = 0
