@@ -6,13 +6,13 @@
 ;   C[i] = A[i] + B[i];
 ; }
 
-.A: 0 1 2 3 4 5 6 7 8 9     ; int A[10] = {...}
-.B: 0 1 2 3 4 5 6 7 8 9     ; int B[10] = {...}
-.C: 0 0 0 0 0 0 0 0 0 0     ; int C[10] = {...}
+.A: 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9     ; int A[10] = {...}
+.B: 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9     ; int B[10] = {...}
+.C: 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0     ; int C[10] = {...}
 
 
-    li $0 10                ; int n = 10
-    li $1 1                 ; int i = 1
+    addi $0 $0 30           ; int n = 30
+    addi $1 $1 1            ; int i = 1
 
 for:
     lw $3 A($1)             ; $3 = A[i]
@@ -23,4 +23,4 @@ for:
     blt $1 $0 'for'         ; if (i < n) for loop again
 
 for_done:
-    li $31 1                ; set register 31 to 1 (halt)
+    addi $31 $31 1          ; set register 31 to 1 (halt)
