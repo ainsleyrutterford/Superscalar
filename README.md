@@ -26,6 +26,21 @@ $ python main.py programs/pi.asm
 
 ## Instruction set
 
+The instruction set is based on the MIPS instruction set. It allows indexed loads and stores and allows text labels. A simple vector addition program:
+
+```assembly
+    addi $0 $0 30           ; int n = 30
+    addi $1 $1 1            ; int i = 1
+
+for:
+    lw $3 A($1)             ; $3 = A[i]
+    lw $4 B($1)             ; $4 = B[i]
+    add $5 $3 $4            ; $5 = A[i] + B[i]
+    sw C($1) $5             ; c[i] = $5
+    addi $1 $1 1            ; i++
+    blt $1 $0 'for'         ; if (i < n) for loop again
+```
+
 - `add  r1 r2 r3`
 - `addi r1 r2 c`
 - `sub  r1 r2 r3`
