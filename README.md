@@ -29,11 +29,11 @@ $ python main.py programs/pi.asm
 The instruction set is based on the MIPS instruction set. It allows indexed loads and stores and allows text labels. A simple vector addition program:
 
 ```assembly
-.A: 0 1 2 3 4               ; int A[5] = {...}
-.B: 0 1 2 3 4               ; int B[5] = {...}
+.A: 1 2 3 4 5               ; int A[5] = {...}
+.B: 1 2 3 4 5               ; int B[5] = {...}
 .C: 0 0 0 0 0               ; int C[5] = {...}
 
-    addi $0 $0 30           ; int n = 30
+    addi $0 $0 5            ; int n = 5
     addi $1 $1 1            ; int i = 1
 
 for:
