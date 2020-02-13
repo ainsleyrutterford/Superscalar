@@ -5,10 +5,11 @@ def strip_comments(assembly):
         position = line.find(';')
         if len(line) > 0:
             if position > 0:
-                stripped_assembly += (line[:position].strip() + '\n')
+                stripped_assembly += line[:position].strip() + '\n'
             elif position < 0:
-                stripped_assembly += (line + '\n')
+                stripped_assembly += line + '\n'
     return stripped_assembly
+
 
 def replace_labels(assembly):
     labels = {}

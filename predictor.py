@@ -2,7 +2,7 @@ class Predictor:
 
     predict = lambda: None
     btb = [0] * 1024
-    bht = [[0 for x in range(6)] for y in range(1024)] 
+    bht = [[0 for x in range(6)] for y in range(1024)]
     correct = 0
     incorrect = 0
     branches = []
@@ -14,9 +14,9 @@ class Predictor:
             self.predict = self.not_taken
         elif method == 'two_bit':
             self.predict = self.two_bit
-    
+
     def taken(self, pc, instruction):
-        opcode = instruction[:instruction.find(' ')]
+        opcode = instruction[: instruction.find(' ')]
         if opcode == 'j':
             return int(instruction.split(' ')[1:][0])
         if opcode == 'beq' or opcode == 'bne' or opcode == 'ble' or opcode == 'blt':
@@ -24,13 +24,13 @@ class Predictor:
         return pc + 1
 
     def not_taken(self, pc, instruction):
-        opcode = instruction[:instruction.find(' ')]
+        opcode = instruction[: instruction.find(' ')]
         if opcode == 'j':
             return int(instruction.split(' ')[1:][0])
         return pc + 1
 
     def two_bit(self, pc, instruction):
-        opcode = instruction[:instruction.find(' ')]
+        opcode = instruction[: instruction.find(' ')]
         if opcode == 'j':
             return int(instruction.split(' ')[1:][0])
         index = self.bht[pc][0] * 2 + self.bht[pc][1] + 2
@@ -38,33 +38,33 @@ class Predictor:
             return self.btb[pc]
         else:
             return pc + 1
-    
+
     def check(self, rf, op, operands, pc, next_pc, executed):
         correct_pc = next_pc
         taken = False
         if op == 'beq':
-            if (rf[int(operands[0][1:])] == rf[int(operands[1][1:])]):
+            if rf[int(operands[0][1:])] == rf[int(operands[1][1:])]:
                 correct_pc = int(operands[2])
                 taken = True
             else:
                 correct_pc = pc + 1
                 taken = False
         if op == 'bne':
-            if (rf[int(operands[0][1:])] != rf[int(operands[1][1:])]):
+            if rf[int(operands[0][1:])] != rf[int(operands[1][1:])]:
                 correct_pc = int(operands[2])
                 taken = True
             else:
                 correct_pc = pc + 1
                 taken = False
         if op == 'ble':
-            if (rf[int(operands[0][1:])] <= rf[int(operands[1][1:])]):
+            if rf[int(operands[0][1:])] <= rf[int(operands[1][1:])]:
                 correct_pc = int(operands[2])
                 taken = True
             else:
                 correct_pc = pc + 1
                 taken = False
         if op == 'blt':
-            if (rf[int(operands[0][1:])] <  rf[int(operands[1][1:])]):
+            if rf[int(operands[0][1:])] < rf[int(operands[1][1:])]:
                 correct_pc = int(operands[2])
                 taken = True
             else:
@@ -86,7 +86,6 @@ class Predictor:
             if op != 'j':
                 self.incorrect += 1
             return (False, correct_pc)
-
 
     def update_two_bit(self, pc, correct_pc, taken):
         index = self.bht[pc][0] * 2 + self.bht[pc][1] + 2

@@ -6,9 +6,15 @@ import argparse
 parser = argparse.ArgumentParser()
 
 parser.add_argument('file', type=str, help="file containing the program to run")
-parser.add_argument('-rob', action='store', dest='rob', type=int, default=32, help="size of redorder buffer")
-parser.add_argument('-branch', action='store', dest='branch', default='two_bit', help="branch prediction scheme")
-parser.add_argument('-width', action='store', dest='width', type=int, default=4, help="width of pipeline")
+parser.add_argument(
+    '-rob', action='store', dest='rob', type=int, default=32, help="size of redorder buffer"
+)
+parser.add_argument(
+    '-branch', action='store', dest='branch', default='two_bit', help="branch prediction scheme"
+)
+parser.add_argument(
+    '-width', action='store', dest='width', type=int, default=4, help="width of pipeline"
+)
 
 args = parser.parse_args()
 
@@ -40,7 +46,10 @@ print(f'Branch predixtion method:      {args.branch}')
 print(f'Total branches:                {cpu.predictor.correct + cpu.predictor.incorrect}')
 print(f'Correctly predicted:           {cpu.predictor.correct}')
 
-distances = [cpu.predictor.branches[i + 1] - cpu.predictor.branches[i] for i in range(len(cpu.predictor.branches) - 1)]
+distances = [
+    cpu.predictor.branches[i + 1] - cpu.predictor.branches[i]
+    for i in range(len(cpu.predictor.branches) - 1)
+]
 
 if len(distances) == 0:
     average = float('inf')
